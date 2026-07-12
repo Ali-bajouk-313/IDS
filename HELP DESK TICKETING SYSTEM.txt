@@ -1,0 +1,298 @@
+HELP DESK TICKETING SYSTEM
+WORKFLOW DIAGRAMS
+
+
+==================================================
+1. LOGIN WORKFLOW
+==================================================
+
+Actor(s):
+- User (Employee / IT Support / Manager / Admin)
+
+Workflow:
+
+START
+  |
+  v
+Open Login Page
+  |
+  v
+Enter Email and Password
+  |
+  v
+Validate Credentials
+  |
+  v
+Are Credentials Correct?
+  |
+  +----------------+
+  |                |
+ NO               YES
+  |                |
+  v                v
+Show Error       Check User Role
+Message              |
+  |                  |
+  |                  +----------------+
+  |                  |                |
+  |                  v                v
+  |             Employee        IT Support
+  |                  |                |
+  |                  v                v
+  |            Employee       Support Dashboard
+  |            Dashboard
+  |
+  |                  +----------------+
+  |                  |                |
+  |                  v                v
+  |              Manager           Admin
+  |                  |                |
+  |                  v                v
+  |            Manager        Admin Dashboard
+  |            Dashboard
+  |
+  v
+Back to Login
+
+
+==================================================
+2. CREATE TICKET WORKFLOW
+==================================================
+
+Actor:
+- Employee
+
+Workflow:
+
+START
+  |
+  v
+Employee Opens "Create Ticket"
+  |
+  v
+Fill Ticket Information
+
+Information:
+- Title
+- Description
+- Category
+- Priority
+- Attachment (Optional)
+
+  |
+  v
+Submit Ticket
+  |
+  v
+Validate Information
+  |
+  v
+Is Information Complete?
+  |
+  +----------------+
+  |                |
+ NO               YES
+  |                |
+  v                v
+Show Error       Create Ticket Record
+  |                |
+  v                v
+Edit Ticket     Set Status = OPEN
+                   |
+                   v
+            Notify IT Support Team
+                   |
+                   v
+            Ticket Appears in My Tickets
+                   |
+                   v
+                  END
+
+
+==================================================
+3. TICKET ASSIGNMENT WORKFLOW
+==================================================
+
+Actor(s):
+- IT Support
+- Manager
+
+Workflow:
+
+START
+  |
+  v
+New Ticket Created
+  |
+  v
+IT Support Opens Ticket Management
+  |
+  v
+View Unassigned Tickets
+  |
+  v
+Select Ticket
+  |
+  v
+Review Ticket Details
+  |
+  v
+Assign Ticket to Support Member
+  |
+  v
+Update Ticket Information
+  |
+  v
+Set Assigned User
+  |
+  v
+Change Status:
+
+OPEN --> IN PROGRESS
+
+  |
+  v
+Send Notification to Assigned Support
+  |
+  v
+END
+
+
+==================================================
+4. TICKET RESOLUTION WORKFLOW
+==================================================
+
+Actor(s):
+- IT Support
+- Employee
+
+Workflow:
+
+START
+  |
+  v
+IT Support Opens Assigned Ticket
+  |
+  v
+Analyze Problem
+  |
+  v
+Work on Solution
+  |
+  v
+Update Ticket Comments
+  |
+  v
+Problem Solved?
+  |
+  +----------------+
+  |                |
+ NO               YES
+  |                |
+  v                v
+Continue       Change Status
+Troubleshooting     |
+                    v
+              IN PROGRESS
+                    |
+                    v
+                RESOLVED
+                    |
+                    v
+             Notify Employee
+                    |
+                    v
+          Employee Reviews Solution
+                    |
+                    v
+          Accept Resolution?
+                    |
+          +---------+---------+
+          |                   |
+         NO                  YES
+          |                   |
+          v                   v
+    Reopen Ticket        Change Status
+          |                   |
+          |                   v
+          |                CLOSED
+          |
+          v
+   Back to IT Support
+
+                    |
+                    v
+                   END
+
+
+==================================================
+5. ADMIN / USER MANAGEMENT WORKFLOW
+==================================================
+
+Actor:
+- Admin
+
+Workflow:
+
+START
+  |
+  v
+Admin Login
+  |
+  v
+Open User Management
+  |
+  v
+Select Action
+
+  |
+  +----------------+----------------+
+  |                |                |
+  v                v                v
+
+ADD USER       UPDATE USER      DELETE USER
+
+  |                |                |
+  v                v                v
+
+Enter User     Modify User     Confirm Delete
+Details        Information          |
+  |                |                |
+  v                v                v
+
+Assign Role    Save Changes   Remove Account
+  |
+  v
+Create Account
+
+
+          |
+          v
+
+Update Database
+          |
+          v
+
+Send Notification (Optional)
+          |
+          v
+
+END
+
+
+==================================================
+END OF WORKFLOWS
+==================================================
+The project will follow the Agile Scrum methodology with weekly sprints. Each sprint delivers a working feature that can be tested and reviewed.
+
+
+| Week | Tasks                                                      | Deliverables      |
+| ---- | ---------------------------------------------------------- | ----------------- |
+| 1    | Requirement Analysis, Project Planning, UI Wireframes, ERD | Project Proposal  |
+| 2    | Authentication & User Roles                                | Login/Register    |
+| 3    | Ticket CRUD                                                | Ticket Module     |
+| 4    | Assignment Workflow                                        | Ticket Assignment |
+| 5    | Notifications & Dashboard                                  | Dashboard         |
+| 6    | Reports & AI Integration                                   | Reporting Module  |
+| 7    | Testing & UI Improvements                                  | Stable Version    |
+| 8    | Deployment & Documentation                                 | Final Project     |
