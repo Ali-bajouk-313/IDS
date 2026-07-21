@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PasswordResetController;
 
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -82,3 +83,23 @@ Route::middleware(['auth:api','role:Manager'])->group(function () {
     });
 
 });
+
+
+use Illuminate\Support\Facades\Mail;
+
+Route::get('/test-email', function () {
+    Mail::raw('This is a test email from HelpDeskPro.', function ($message) {
+        $message->to('mohammadzaiter567@gmail.com')
+                ->subject('HelpDeskPro Test Email');
+    });
+
+    return response()->json([
+        'message' => 'Test email sent!'
+    ]);
+});
+
+
+Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink']);
+Route::post('/reset-password', [PasswordResetController::class, 'resetPassword']);
+
+Route::get('/verify-email', [AuthController::class, 'verifyEmail']);
