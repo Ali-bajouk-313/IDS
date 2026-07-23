@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PasswordResetController;
+use App\Models\Category;
 
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -17,8 +18,17 @@ Route::middleware('auth:api')->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout']);
 
-});
+    Route::get('/categories', function () {
+        return response()->json(['categories' => Category::all()]);
+    });
 
+    Route::get('/tickets', [\App\Http\Controllers\TicketController::class, 'index']);
+    Route::post('/tickets', [\App\Http\Controllers\TicketController::class, 'store']);
+    Route::get('/tickets/{id}', [\App\Http\Controllers\TicketController::class, 'show']);
+    Route::put('/tickets/{id}', [\App\Http\Controllers\TicketController::class, 'update']);
+    Route::delete('/tickets/{id}', [\App\Http\Controllers\TicketController::class, 'destroy']);
+
+});
 
 
 Route::middleware(['auth:api', 'role:Admin'])->group(function () {
