@@ -50,4 +50,19 @@ class Ticket extends Model
     {
         return $this->belongsTo(User::class, 'assignedTo', 'id');
     }
+
+    public function assignments()
+    {
+        return $this->hasMany(TicketAssignment::class, 'ticket_id', 'id');
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(TicketComment::class, 'ticketId', 'id');
+    }
+
+    public function internalNotes()
+    {
+        return $this->hasMany(TicketInternalNote::class, 'ticket_id', 'id');
+    }
 }

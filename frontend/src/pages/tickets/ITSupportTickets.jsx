@@ -29,7 +29,7 @@ function ITSupportTickets() {
       setLoading(true);
       setError("");
       try {
-        const response = await ticketService.getTickets({ status, priority, date });
+        const response = await ticketService.getMyAssignedTickets({ status, priority, date });
         setTickets(response.data.tickets || []);
       } catch (err) {
         setError(err?.response?.data?.message || "Unable to load tickets. Please refresh.");
@@ -59,11 +59,24 @@ function ITSupportTickets() {
     }
   };
 
+  const handleReject = async (ticketId) => {
+    try {
+      await ticketService.unassignTicket(ticketId);
+      setTickets((current) => current.filter((item) => item.id !== ticketId));
+    } catch (err) {
+      setError(err?.response?.data?.message || "Unable to reject ticket.");
+    }
+  };
+
   const rows = tickets.map((ticket) => ({
     ticketNumber: ticket.ticketNumber,
     title: ticket.title,
     employee: ticket.creator?.fullName || "-",
-    priority: (
+    priority: ticket.status === "Closed" ? (
+      <span className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] bg-slate-100 text-slate-700">
+        {ticket.priority}
+      </span>
+    ) : (
       <select
         value={updates[ticket.id]?.priority || ticket.priority}
         onChange={(e) => setUpdates((current) => ({
@@ -87,23 +100,25 @@ function ITSupportTickets() {
         <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] ${statusStyles[ticket.status] ?? statusStyles.Open}`}>
           {ticket.status}
         </span>
-        <select
-          value={updates[ticket.id]?.status || ticket.status}
-          onChange={(e) => setUpdates((current) => ({
-            ...current,
-            [ticket.id]: {
-              ...current[ticket.id],
-              status: e.target.value,
-            },
-          }))}
-          className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 outline-none"
-        >
-          {statusOptions.map((option) => (
-            <option key={option} value={option || ticket.status}>
-              {option || ticket.status}
-            </option>
-          ))}
-        </select>
+        {ticket.status === "Closed" ? null : (
+          <select
+            value={updates[ticket.id]?.status || ticket.status}
+            onChange={(e) => setUpdates((current) => ({
+              ...current,
+              [ticket.id]: {
+                ...current[ticket.id],
+                status: e.target.value,
+              },
+            }))}
+            className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 outline-none"
+          >
+            {statusOptions.map((option) => (
+              <option key={option} value={option || ticket.status}>
+                {option || ticket.status}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
     ),
     action: (
@@ -114,13 +129,24 @@ function ITSupportTickets() {
         >
           View
         </Link>
-        <button
-          type="button"
-          onClick={() => handleUpdate(ticket)}
-          className="rounded-2xl bg-amber-100 px-3 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-200"
-        >
-          Save
-        </button>
+        {ticket.status !== "Closed" ? (
+          <button
+            type="button"
+            onClick={() => handleUpdate(ticket)}
+            className="rounded-2xl bg-amber-100 px-3 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-200"
+          >
+            Save
+          </button>
+        ) : null}
+        {ticket.status !== "Closed" ? (
+          <button
+            type="button"
+            onClick={() => handleReject(ticket.id)}
+            className="rounded-2xl bg-rose-100 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-200"
+          >
+            Reject
+          </button>
+        ) : null}
       </div>
     ),
   }));

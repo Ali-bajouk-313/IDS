@@ -15,6 +15,7 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:api')->group(function () {
 
     Route::get('/me', [AuthController::class, 'me']);
+    Route::get('/users', [AuthController::class, 'index']);
 
     Route::post('/logout', [AuthController::class, 'logout']);
 
@@ -24,9 +25,20 @@ Route::middleware('auth:api')->group(function () {
 
     Route::get('/tickets', [\App\Http\Controllers\TicketController::class, 'index']);
     Route::post('/tickets', [\App\Http\Controllers\TicketController::class, 'store']);
+    Route::get('/tickets/my-assigned', [\App\Http\Controllers\TicketController::class, 'myAssigned']);
+    Route::put('/tickets/{id}/status', [\App\Http\Controllers\TicketController::class, 'updateStatus']);
     Route::get('/tickets/{id}', [\App\Http\Controllers\TicketController::class, 'show']);
     Route::put('/tickets/{id}', [\App\Http\Controllers\TicketController::class, 'update']);
     Route::delete('/tickets/{id}', [\App\Http\Controllers\TicketController::class, 'destroy']);
+    Route::post('/tickets/{ticket}/assign', [\App\Http\Controllers\TicketController::class, 'assignTicket']);
+    Route::post('/tickets/{ticket}/unassign', [\App\Http\Controllers\TicketController::class, 'unassignTicket']);
+    Route::get('/tickets/{ticket}/history', [\App\Http\Controllers\TicketController::class, 'history']);
+    Route::get('/tickets/{ticket}/comments', [\App\Http\Controllers\TicketCommentController::class, 'index']);
+    Route::post('/tickets/{ticket}/comments', [\App\Http\Controllers\TicketCommentController::class, 'store']);
+    Route::get('/tickets/{ticket}/internal-notes', [\App\Http\Controllers\TicketInternalNoteController::class, 'index']);
+    Route::post('/tickets/{ticket}/internal-notes', [\App\Http\Controllers\TicketInternalNoteController::class, 'store']);
+    Route::delete('/internal-notes/{id}', [\App\Http\Controllers\TicketInternalNoteController::class, 'destroy']);
+    Route::get('/activity-logs', [\App\Http\Controllers\ActivityLogController::class, 'index']);
 
 });
 

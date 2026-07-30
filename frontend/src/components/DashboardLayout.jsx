@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
-import { FiBarChart2, FiBell, FiBriefcase, FiClipboard, FiGrid, FiHome, FiLayers, FiLifeBuoy, FiMessageSquare, FiSettings, FiShield, FiUserCheck, FiUsers } from "react-icons/fi";
+import { FiActivity, FiBarChart2, FiBell, FiBriefcase, FiClipboard, FiGrid, FiHome, FiLayers, FiLifeBuoy, FiMessageSquare, FiSettings, FiShield, FiUserCheck, FiUsers } from "react-icons/fi";
 
 function DashboardLayout({ children, role, title, subtitle }) {
   const location = useLocation();
@@ -15,6 +15,7 @@ function DashboardLayout({ children, role, title, subtitle }) {
         { name: "Roles", path: "/admin-dashboard/roles", icon: FiShield },
         { name: "Departments", path: "/admin-dashboard/departments", icon: FiGrid },
         { name: "All Tickets", path: "/admin-dashboard/tickets", icon: FiMessageSquare },
+        { name: "Activity Logs", path: "/admin-dashboard/activity-logs", icon: FiActivity },
         { name: "Categories", path: "/admin-dashboard/categories", icon: FiLayers },
         { name: "SLA Rules", path: "/admin-dashboard/sla", icon: FiClipboard },
         { name: "Reports", path: "/admin-dashboard/reports", icon: FiBarChart2 },

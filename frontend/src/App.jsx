@@ -16,12 +16,15 @@ import AdminTickets from "./pages/tickets/AdminTickets";
 import ITSupportTickets from "./pages/tickets/ITSupportTickets";
 import ManagerTickets from "./pages/tickets/ManagerTickets";
 import TicketDetails from "./pages/tickets/TicketDetails";
+import ActivityLogs from "./pages/admin/ActivityLogs";
+import ToastContainer from "./components/ToastContainer";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 
 function App() {
   return (
     <BrowserRouter>
+      <ToastContainer />
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -42,6 +45,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["Admin"]}>
               <AdminTickets />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin-dashboard/activity-logs"
+          element={
+            <ProtectedRoute allowedRoles={["Admin"]}>
+              <ActivityLogs />
             </ProtectedRoute>
           }
         />

@@ -10,9 +10,13 @@ use App\Mail\EmailVerificationMail;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use App\Services\ActivityLogService;
 
 class AuthController extends Controller
 {
+    public function __construct(protected ActivityLogService $activityLogService)
+    {
+    }
 
     public function login(Request $request)
 {
@@ -69,6 +73,8 @@ class AuthController extends Controller
 
     // Generate JWT token
     $token = JWTAuth::fromUser($user);
+
+    $this->activityLogService->logLogin($user, $request->ip());
 
 
     return response()->json([
@@ -141,6 +147,8 @@ Mail::to($user->email)
         $token,
         $user->email
     ));
+
+        $this->activityLogService->logRegister($user, $request->ip());
 
 
         return response()->json([
@@ -226,11 +234,28 @@ public function verifyEmail(Request $request)
         ]);
     }
 
-
-
-    public function logout()
+    public function index(Request $request)
     {
+        $user = auth('api')->user();
+
+        if ($user->role->roleName !== 'Admin') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $users = User::with('role')->get();
+
+        return response()->json(['users' => $users]);
+    }
+
+    public function logout(Request $request)
+    {
+        $user = auth('api')->user();
+
         auth('api')->logout();
+
+        if ($user) {
+            $this->activityLogService->logLogout($user, $request->ip());
+        }
 
         return response()->json([
             'message' => 'Logged out successfully'

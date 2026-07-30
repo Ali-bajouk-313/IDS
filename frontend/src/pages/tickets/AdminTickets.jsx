@@ -4,6 +4,7 @@ import DashboardLayout from "../../components/DashboardLayout";
 import DataTable from "../../components/DataTable";
 import StatCard from "../../components/StatCard";
 import ticketService from "../../services/ticketService";
+import api from "../../api/axios.js";
 
 const statusStyles = {
   Open: "bg-blue-100 text-blue-700",
@@ -20,6 +21,9 @@ function AdminTickets() {
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState("");
   const [date, setDate] = useState("");
+  const [supportAgents, setSupportAgents] = useState([]);
+  const [assigningTicketId, setAssigningTicketId] = useState(null);
+  const [selectedAgentId, setSelectedAgentId] = useState("");
 
   useEffect(() => {
     async function loadTickets() {
@@ -38,6 +42,20 @@ function AdminTickets() {
 
     loadTickets();
   }, [status, priority, date]);
+
+  useEffect(() => {
+    async function loadSupportAgents() {
+      try {
+        const response = await api.get("/users");
+        const agents = (response.data.users || []).filter((user) => user.role?.roleName === "IT Support");
+        setSupportAgents(agents);
+      } catch (err) {
+        setSupportAgents([]);
+      }
+    }
+
+    loadSupportAgents();
+  }, []);
 
   const stats = useMemo(() => {
     const total = tickets.length;
@@ -62,6 +80,26 @@ function AdminTickets() {
     }
   };
 
+  const handleAssign = async (ticketId) => {
+    if (!selectedAgentId) {
+      setError("Choose an IT Support agent before assigning the ticket.");
+      return;
+    }
+
+    setAssigningTicketId(ticketId);
+    setError("");
+
+    try {
+      const response = await ticketService.assignTicket(ticketId, selectedAgentId);
+      setTickets((current) => current.map((ticket) => ticket.id === ticketId ? response.data.ticket : ticket));
+      setSelectedAgentId("");
+    } catch (err) {
+      setError(err?.response?.data?.message || "Unable to assign ticket.");
+    } finally {
+      setAssigningTicketId(null);
+    }
+  };
+
   const rows = tickets.map((ticket) => ({
     ticketNumber: ticket.ticketNumber,
     title: ticket.title,
@@ -81,12 +119,41 @@ function AdminTickets() {
         >
           View
         </Link>
-        <Link
-          to={`/tickets/${ticket.id}`}
-          className="rounded-2xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
-        >
-          Edit
-        </Link>
+        {ticket.status !== "Closed" ? (
+          <Link
+            to={`/tickets/${ticket.id}`}
+            className="rounded-2xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
+          >
+            Edit
+          </Link>
+        ) : null}
+        {ticket.status !== "Closed" && ticket.assignedTo === null ? (
+          <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-1">
+            <select
+              value={selectedAgentId}
+              onChange={(e) => setSelectedAgentId(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 outline-none"
+            >
+              <option value="">Assign to</option>
+              {supportAgents.map((agent) => (
+                <option key={agent.id} value={agent.id}>{agent.fullName}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => handleAssign(ticket.id)}
+              disabled={assigningTicketId === ticket.id}
+              className="rounded-xl bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+            >
+              {assigningTicketId === ticket.id ? "Working..." : "Assign"}
+            </button>
+          </div>
+        ) : null}
+        {ticket.assignedTo ? (
+          <span className="rounded-2xl bg-violet-100 px-3 py-2 text-xs font-semibold text-violet-700">
+            Assigned to: {ticket.assignedUser?.fullName || "IT Support"}
+          </span>
+        ) : null}
         <button
           type="button"
           onClick={() => handleDelete(ticket.id)}

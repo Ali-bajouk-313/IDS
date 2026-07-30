@@ -70,4 +70,19 @@ class User extends Authenticatable implements JWTSubject
             'id'
         );
     }
+
+    public function assignedTickets()
+    {
+        return $this->hasMany(Ticket::class, 'assignedTo', 'id');
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(TicketComment::class, 'userId', 'id');
+    }
+
+    public function internalNotes()
+    {
+        return $this->hasMany(TicketInternalNote::class, 'user_id', 'id');
+    }
 }

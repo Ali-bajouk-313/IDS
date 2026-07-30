@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import DashboardLayout from "../../components/DashboardLayout";
 import ticketService from "../../services/ticketService";
@@ -18,6 +18,9 @@ function TicketDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [ticket, setTicket] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [comments, setComments] = useState([]);
+  const [internalNotes, setInternalNotes] = useState([]);
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState({
     title: "",
@@ -29,6 +32,16 @@ function TicketDetails() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [commentSending, setCommentSending] = useState(false);
+  const [newCommentText, setNewCommentText] = useState("");
+  const [commentError, setCommentError] = useState("");
+  const [commentSuccess, setCommentSuccess] = useState("");
+  const [internalNoteText, setInternalNoteText] = useState("");
+  const [internalNoteSending, setInternalNoteSending] = useState(false);
+  const [internalNoteError, setInternalNoteError] = useState("");
+  const [internalNoteSuccess, setInternalNoteSuccess] = useState("");
+  const [internalNoteDeletingId, setInternalNoteDeletingId] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -39,8 +52,44 @@ function TicketDetails() {
   const canSupportUpdate = role === "IT Support" && ticket?.assignedTo === user.id;
   const canAdminEdit = role === "Admin";
   const canEdit = canAdminEdit || canSupportUpdate || canEditByEmployee;
+  const canStartWork = canSupportUpdate && ticket?.status === "Assigned";
+  const canResolve = canSupportUpdate && ticket?.status === "In Progress";
+  const canClose = canAdminEdit && ticket?.status === "Resolved";
+  const canEmployeeComment = role === "Employee" && ticket?.creator?.id === user.id;
+  const canSupportComment = role === "IT Support" && ticket?.assignedTo === user.id;
+  const canAdminComment = role === "Admin";
+  const canAddComment = canEmployeeComment || canSupportComment || canAdminComment;
+  const canViewInternalNotes = role === "Admin" || (role === "IT Support" && ticket?.assignedTo === user.id);
+  const canDeleteInternalNotes = role === "Admin";
 
   const showEditPanel = useMemo(() => canEdit && ticket, [canEdit, ticket]);
+
+  const loadTicketDetails = useCallback(async () => {
+    const [ticketResponse, commentsResponse, historyResponse] = await Promise.all([
+      ticketService.getTicketById(id),
+      ticketService.getTicketComments(id),
+      ticketService.getTicketHistory(id),
+    ]);
+
+    setTicket(ticketResponse.data.ticket);
+    setHistory(historyResponse.data.history || []);
+    setComments(commentsResponse.data.comments || []);
+    setForm({
+      title: ticketResponse.data.ticket.title || "",
+      description: ticketResponse.data.ticket.description || "",
+      categoryId: ticketResponse.data.ticket.categoryId || "",
+      priority: ticketResponse.data.ticket.priority || "Medium",
+      status: ticketResponse.data.ticket.status || "Open",
+      comment: "",
+    });
+
+    if (role === "Admin" || (role === "IT Support" && ticketResponse.data.ticket.assignedTo === user.id)) {
+      const notesResponse = await ticketService.getInternalNotes(id);
+      setInternalNotes(notesResponse.data.notes || []);
+    } else {
+      setInternalNotes([]);
+    }
+  }, [id, role, user.id]);
 
   const handleFieldChange = (field) => (event) => {
     setForm((current) => ({
@@ -78,8 +127,7 @@ function TicketDetails() {
       }
 
       await ticketService.updateTicket(id, payload);
-      const response = await ticketService.getTicketById(id);
-      setTicket(response.data.ticket);
+      await loadTicketDetails();
       setSuccess("Ticket updated successfully.");
       setForm((current) => ({ ...current, comment: "" }));
     } catch (err) {
@@ -89,23 +137,95 @@ function TicketDetails() {
     }
   };
 
+  const handleStatusChange = async (nextStatus) => {
+    setStatusUpdating(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      await ticketService.updateTicketStatus(id, { status: nextStatus });
+      await loadTicketDetails();
+      setSuccess(`Ticket moved to ${nextStatus}.`);
+    } catch (err) {
+      setError(err?.response?.data?.message || "Unable to update ticket status.");
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
+  const handleSendComment = async () => {
+    setCommentError("");
+    setCommentSuccess("");
+
+    const text = newCommentText.trim();
+
+    if (!text) {
+      setCommentError("Comment text is required.");
+      return;
+    }
+
+    setCommentSending(true);
+
+    try {
+      await ticketService.addTicketComment(id, text);
+      await loadTicketDetails();
+      setNewCommentText("");
+      setCommentSuccess("Comment sent successfully.");
+    } catch (err) {
+      setCommentError(err?.response?.data?.message || "Unable to send comment.");
+    } finally {
+      setCommentSending(false);
+    }
+  };
+
+  const handleAddInternalNote = async () => {
+    setInternalNoteError("");
+    setInternalNoteSuccess("");
+
+    const text = internalNoteText.trim();
+
+    if (!text) {
+      setInternalNoteError("Internal note text is required.");
+      return;
+    }
+
+    setInternalNoteSending(true);
+
+    try {
+      await ticketService.addInternalNote(id, text);
+      await loadTicketDetails();
+      setInternalNoteText("");
+      setInternalNoteSuccess("Internal note added successfully.");
+    } catch (err) {
+      setInternalNoteError(err?.response?.data?.message || "Unable to add internal note.");
+    } finally {
+      setInternalNoteSending(false);
+    }
+  };
+
+  const handleDeleteInternalNote = async (noteId) => {
+    setInternalNoteDeletingId(noteId);
+    setInternalNoteError("");
+    setInternalNoteSuccess("");
+
+    try {
+      await ticketService.deleteInternalNote(noteId);
+      await loadTicketDetails();
+      setInternalNoteSuccess("Internal note deleted successfully.");
+    } catch (err) {
+      setInternalNoteError(err?.response?.data?.message || "Unable to delete internal note.");
+    } finally {
+      setInternalNoteDeletingId(null);
+    }
+  };
+
   useEffect(() => {
     async function loadTicket() {
       setLoading(true);
       setError("");
 
       try {
-        const response = await ticketService.getTicketById(id);
-        setTicket(response.data.ticket);
-        setCategories(response.data.categories || []);
-        setForm({
-          title: response.data.ticket.title || "",
-          description: response.data.ticket.description || "",
-          categoryId: response.data.ticket.categoryId || "",
-          priority: response.data.ticket.priority || "Medium",
-          status: response.data.ticket.status || "Open",
-          comment: "",
-        });
+        await loadTicketDetails();
       } catch (err) {
         setError(err?.response?.data?.message || "Unable to load ticket details.");
       } finally {
@@ -114,7 +234,7 @@ function TicketDetails() {
     }
 
     loadTicket();
-  }, [id]);
+  }, [loadTicketDetails]);
 
   useEffect(() => {
     async function loadCategories() {
@@ -198,13 +318,49 @@ function TicketDetails() {
                   <h3 className="text-lg font-semibold text-slate-900">Ticket details</h3>
                   <p className="mt-1 text-sm text-slate-500">Review the ticket description, history and current status.</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => navigate(-1)}
-                  className="inline-flex items-center justify-center rounded-3xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-                >
-                  Back to tickets
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {(canStartWork || canResolve || canClose) && (
+                    <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2">
+                      {canStartWork ? (
+                        <button
+                          type="button"
+                          onClick={() => handleStatusChange("In Progress")}
+                          disabled={statusUpdating}
+                          className="rounded-2xl bg-amber-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                        >
+                          {statusUpdating ? "Working…" : "Start Work"}
+                        </button>
+                      ) : null}
+                      {canResolve ? (
+                        <button
+                          type="button"
+                          onClick={() => handleStatusChange("Resolved")}
+                          disabled={statusUpdating}
+                          className="rounded-2xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                        >
+                          {statusUpdating ? "Working…" : "Resolve"}
+                        </button>
+                      ) : null}
+                      {canClose ? (
+                        <button
+                          type="button"
+                          onClick={() => handleStatusChange("Closed")}
+                          disabled={statusUpdating}
+                          className="rounded-2xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                        >
+                          {statusUpdating ? "Working…" : "Close Ticket"}
+                        </button>
+                      ) : null}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => navigate(-1)}
+                    className="inline-flex items-center justify-center rounded-3xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                  >
+                    Back to tickets
+                  </button>
+                </div>
               </div>
               <p className="mt-4 text-sm leading-7 text-slate-700 whitespace-pre-line">{ticket.description}</p>
             </div>
@@ -359,30 +515,37 @@ function TicketDetails() {
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="mb-5 flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-lg font-semibold text-slate-900">Timeline</h3>
-                <p className="mt-1 text-sm text-slate-500">Review ticket history and comments in one place.</p>
+                <h3 className="text-lg font-semibold text-slate-900">History</h3>
+                <p className="mt-1 text-sm text-slate-500">Newest events first. Full audit trail of ticket actions.</p>
               </div>
             </div>
 
-            {ticket.history?.length > 0 ? (
-              <div className="space-y-4">
-                {ticket.history.map((entry) => (
-                  <div key={entry.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">{entry.userName}</p>
-                        <p className="text-sm text-slate-500">{new Date(entry.changedAt).toLocaleString()}</p>
+            {history.length > 0 ? (
+              <div className="space-y-0">
+                {history.map((entry, index) => (
+                  <div key={entry.id} className="relative pl-8 pb-6">
+                    {index < history.length - 1 ? <span className="absolute left-[11px] top-5 h-full w-px bg-slate-300" /> : null}
+                    <span className="absolute left-0 top-1.5 h-6 w-6 rounded-full border-2 border-slate-300 bg-white" />
+
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{entry.comment || "Ticket updated"}</p>
+                          <p className="text-sm text-slate-600">{entry.changedBy?.fullName || entry.userName || "Unknown user"}</p>
+                          <p className="text-sm text-slate-500">{new Date(entry.changedAt).toLocaleString()}</p>
+                        </div>
+                        {entry.oldStatus || entry.newStatus ? (
+                          <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700">
+                            {(entry.oldStatus || "-") + " → " + (entry.newStatus || "-")}
+                          </span>
+                        ) : null}
                       </div>
-                      <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700">
-                        {entry.oldStatus} → {entry.newStatus}
-                      </span>
                     </div>
-                    {entry.comment ? <p className="mt-3 text-sm leading-6 text-slate-700">{entry.comment}</p> : null}
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">No timeline entries found for this ticket yet.</div>
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">No history entries found for this ticket yet.</div>
             )}
           </div>
 
@@ -392,13 +555,13 @@ function TicketDetails() {
               <p className="mt-1 text-sm text-slate-500">Conversation history for this ticket.</p>
             </div>
 
-            {ticket.comments?.length > 0 ? (
+            {comments.length > 0 ? (
               <div className="space-y-4">
-                {ticket.comments.map((comment) => (
+                {comments.map((comment) => (
                   <div key={comment.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">{comment.userName}</p>
+                        <p className="text-sm font-semibold text-slate-900">{comment.user?.fullName || comment.userName || "Unknown user"}</p>
                         <p className="text-sm text-slate-500">{new Date(comment.createdAt).toLocaleString()}</p>
                       </div>
                     </div>
@@ -409,8 +572,109 @@ function TicketDetails() {
             ) : (
               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">No comments have been added for this ticket yet.</div>
             )}
+
+            <div className="mt-5 border-t border-slate-200 pt-5">
+              {canAddComment ? (
+                <>
+                  <label className="block text-sm text-slate-700">
+                    Write a comment
+                    <textarea
+                      rows={4}
+                      value={newCommentText}
+                      onChange={(event) => setNewCommentText(event.target.value)}
+                      maxLength={2000}
+                      placeholder="Share an update on this ticket"
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    />
+                  </label>
+
+                  <div className="mt-4 flex items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      {commentSuccess ? <p className="text-sm text-emerald-700">{commentSuccess}</p> : null}
+                      {commentError ? <p className="text-sm text-rose-700">{commentError}</p> : null}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSendComment}
+                      disabled={commentSending}
+                      className="inline-flex items-center justify-center rounded-3xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                    >
+                      {commentSending ? "Sending…" : "Send Comment"}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">You can view comments for this ticket, but your role cannot add new comments.</div>
+              )}
+            </div>
           </div>
         </div>
+
+        {canViewInternalNotes ? (
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="mb-5">
+              <h3 className="text-lg font-semibold text-slate-900">Internal Notes</h3>
+              <p className="mt-1 text-sm text-slate-500">Private notes visible only to Admin and the assigned IT Support technician.</p>
+            </div>
+
+            {internalNotes.length > 0 ? (
+              <div className="space-y-4">
+                {internalNotes.map((note) => (
+                  <div key={note.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{note.user?.fullName || "Unknown user"}</p>
+                        <p className="text-sm text-slate-500">{new Date(note.createdAt).toLocaleString()}</p>
+                      </div>
+                      {canDeleteInternalNotes ? (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteInternalNote(note.id)}
+                          disabled={internalNoteDeletingId === note.id}
+                          className="rounded-2xl bg-rose-100 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-200 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                        >
+                          {internalNoteDeletingId === note.id ? "Deleting..." : "Delete"}
+                        </button>
+                      ) : null}
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-slate-700 whitespace-pre-line">{note.note}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">No internal notes have been added for this ticket yet.</div>
+            )}
+
+            <div className="mt-5 border-t border-slate-200 pt-5">
+              <label className="block text-sm text-slate-700">
+                Add internal note
+                <textarea
+                  rows={4}
+                  value={internalNoteText}
+                  onChange={(event) => setInternalNoteText(event.target.value)}
+                  maxLength={5000}
+                  placeholder="Write a private internal note"
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                />
+              </label>
+
+              <div className="mt-4 flex items-center justify-between gap-3">
+                <div className="space-y-1">
+                  {internalNoteSuccess ? <p className="text-sm text-emerald-700">{internalNoteSuccess}</p> : null}
+                  {internalNoteError ? <p className="text-sm text-rose-700">{internalNoteError}</p> : null}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddInternalNote}
+                  disabled={internalNoteSending}
+                  className="inline-flex items-center justify-center rounded-3xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                >
+                  {internalNoteSending ? "Adding..." : "Add Note"}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </DashboardLayout>
   );
