@@ -4,11 +4,13 @@ import { FiFilter, FiSearch } from "react-icons/fi";
 import DashboardLayout from "../../components/DashboardLayout";
 import DataTable from "../../components/DataTable";
 import LoadingSkeleton from "../../components/LoadingSkeleton";
+import Pagination from "../../components/Pagination";
 import ticketService from "../../services/ticketService";
 import { readCollection } from "../../api/axios.js";
 
 const statusOptions = ["", "Open", "Assigned", "In Progress", "Resolved", "Closed"];
 const priorityOptions = ["", "Low", "Medium", "High", "Critical"];
+const pageSizes = [10, 20, 50];
 
 const statusStyles = {
   Open: "bg-blue-100 text-blue-700",
@@ -26,6 +28,8 @@ function EmployeeTickets() {
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState("");
   const [date, setDate] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(pageSizes[0]);
 
   useEffect(() => {
     async function loadTickets() {
@@ -61,7 +65,17 @@ function EmployeeTickets() {
     });
   }, [search, tickets]);
 
-  const rows = filteredTickets.map((ticket) => ({
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, status, priority, date]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredTickets.length / pageSize));
+  const paginatedTickets = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredTickets.slice(start, start + pageSize);
+  }, [filteredTickets, currentPage, pageSize]);
+
+  const rows = paginatedTickets.map((ticket) => ({
     ticketNumber: ticket.ticketNumber,
     title: ticket.title,
     category: ticket.category?.categoryName || "-",
@@ -168,19 +182,32 @@ function EmployeeTickets() {
           ) : filteredTickets.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-600">No tickets found. Adjust the filters or create a new ticket.</div>
           ) : (
-            <DataTable
-              columns={[
-                { label: "Ticket #", key: "ticketNumber" },
-                { label: "Title", key: "title" },
-                { label: "Category", key: "category" },
-                { label: "Priority", key: "priority" },
-                { label: "Status", key: "status" },
-                { label: "Created", key: "createdDate" },
-                { label: "Actions", key: "actions" },
-              ]}
-              rows={rows}
-              emptyState="No tickets match your current filters."
-            />
+            <>
+              <DataTable
+                columns={[
+                  { label: "Ticket #", key: "ticketNumber" },
+                  { label: "Title", key: "title" },
+                  { label: "Category", key: "category" },
+                  { label: "Priority", key: "priority" },
+                  { label: "Status", key: "status" },
+                  { label: "Created", key: "createdDate" },
+                  { label: "Actions", key: "actions" },
+                ]}
+                rows={rows}
+                emptyState="No tickets match your current filters."
+              />
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                pageSize={pageSize}
+                pageSizes={pageSizes}
+                onPageSizeChange={(size) => {
+                  setPageSize(size);
+                  setCurrentPage(1);
+                }}
+              />
+            </>
           )}
         </div>
       </div>

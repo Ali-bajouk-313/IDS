@@ -1,5 +1,27 @@
 import api from "../api/axios.js";
 
+const notificationService = {
+  getNotifications() {
+    return api.get("/notifications");
+  },
+
+  getUnreadNotificationCount() {
+    return api.get("/notifications").then((response) => response?.data?.unread_count ?? 0);
+  },
+
+  markNotificationAsRead(id) {
+    return api.post(`/notifications/${id}/read`);
+  },
+
+  markAllNotificationsAsRead() {
+    return api.get("/notifications").then(async (response) => {
+      const notifications = response?.data?.notifications || [];
+      await Promise.all(notifications.filter((item) => !item.read).map((item) => api.post(`/notifications/${item.id}/read`)));
+      return response;
+    });
+  },
+};
+
 const ticketService = {
   getTickets(filters = {}) {
     const params = {};
@@ -39,6 +61,27 @@ const ticketService = {
 
   deleteInternalNote(id) {
     return api.delete(`/internal-notes/${id}`);
+  },
+
+  getAttachments(id) {
+    return api.get(`/tickets/${id}/attachments`);
+  },
+
+  uploadAttachment(id, file) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    return api.post(`/tickets/${id}/attachments`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+
+  deleteAttachment(id) {
+    return api.delete(`/attachments/${id}`);
+  },
+
+  downloadAttachment(id) {
+    return api.get(`/attachments/${id}/download`, { responseType: "blob" });
   },
 
   createTicket(data) {
@@ -86,4 +129,5 @@ const ticketService = {
   },
 };
 
+export { notificationService };
 export default ticketService;

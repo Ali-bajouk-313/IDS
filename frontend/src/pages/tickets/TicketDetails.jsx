@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import DashboardLayout from "../../components/DashboardLayout";
 import ticketService from "../../services/ticketService";
 import { readCollection, readRecord } from "../../api/axios.js";
+import { formatDateTime } from "../../utils/date";
 
 const statusOptions = ["Open", "Assigned", "In Progress", "Resolved", "Closed"];
 const priorityOptions = ["Low", "Medium", "High", "Critical"];
@@ -22,6 +23,7 @@ function TicketDetails() {
   const [history, setHistory] = useState([]);
   const [comments, setComments] = useState([]);
   const [internalNotes, setInternalNotes] = useState([]);
+  const [attachments, setAttachments] = useState([]);
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState({
     title: "",
@@ -43,25 +45,44 @@ function TicketDetails() {
   const [internalNoteError, setInternalNoteError] = useState("");
   const [internalNoteSuccess, setInternalNoteSuccess] = useState("");
   const [internalNoteDeletingId, setInternalNoteDeletingId] = useState(null);
+  const [attachmentUploading, setAttachmentUploading] = useState(false);
+  const [attachmentError, setAttachmentError] = useState("");
+  const [attachmentSuccess, setAttachmentSuccess] = useState("");
+  const [attachmentDeletingId, setAttachmentDeletingId] = useState(null);
+  const [selectedAttachmentFile, setSelectedAttachmentFile] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const user = JSON.parse(localStorage.getItem("user") || "{}") || {};
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}") || {};
+  const user = {
+    ...storedUser,
+    id: storedUser.id ?? storedUser.userId,
+    role: storedUser.role ?? storedUser.roleName ?? "Employee",
+    departmentId: storedUser.departmentId ?? storedUser.department?.id ?? null,
+  };
   const role = user.role || "Employee";
+  const currentUserId = Number(user.id ?? 0) || null;
+  const currentUserDepartmentId = Number(user.departmentId ?? 0) || null;
+  const creatorId = Number(ticket?.creator?.id ?? ticket?.createdBy ?? 0) || null;
+  const assignedToId = Number(ticket?.assignedTo ?? ticket?.assignedUser?.id ?? 0) || null;
+  const creatorDepartmentId = Number(ticket?.creator?.departmentId ?? 0) || null;
 
-  const canEditByEmployee = role === "Employee" && ticket?.creator?.id === user.id && ticket?.assignedTo === null;
-  const canSupportUpdate = role === "IT Support" && ticket?.assignedTo === user.id;
-  const canAdminEdit = role === "Admin";
+  const canEditByEmployee = role === "Employee" && creatorId === currentUserId && ticket?.assignedTo === null;
+  const canSupportUpdate = role === "IT Support" && assignedToId === currentUserId && ticket?.status !== "In Progress";
+  const canAdminEdit = role === "Admin" && ticket?.status !== "In Progress";
   const canEdit = canAdminEdit || canSupportUpdate || canEditByEmployee;
-  const canStartWork = canSupportUpdate && ticket?.status === "Assigned";
-  const canResolve = canSupportUpdate && ticket?.status === "In Progress";
+  const canStartWork = role === "IT Support" && assignedToId === currentUserId && ticket?.status === "Assigned";
+  const canResolve = role === "IT Support" && assignedToId === currentUserId && ticket?.status === "In Progress";
   const canClose = canAdminEdit && ticket?.status === "Resolved";
-  const canEmployeeComment = role === "Employee" && ticket?.creator?.id === user.id;
-  const canSupportComment = role === "IT Support" && ticket?.assignedTo === user.id;
+  const canEmployeeComment = role === "Employee" && creatorId === currentUserId;
+  const canSupportComment = role === "IT Support" && assignedToId === currentUserId;
   const canAdminComment = role === "Admin";
   const canAddComment = canEmployeeComment || canSupportComment || canAdminComment;
-  const canViewInternalNotes = role === "Admin" || (role === "IT Support" && ticket?.assignedTo === user.id);
+  const canViewInternalNotes = role === "Admin" || (role === "IT Support" && assignedToId === currentUserId);
   const canDeleteInternalNotes = role === "Admin";
+  const canViewAttachments = role === "Admin" || (role === "IT Support" && assignedToId === currentUserId) || (role === "Employee" && creatorId === currentUserId) || (role === "Manager" && creatorDepartmentId === currentUserDepartmentId);
+  const canUploadAttachments = role === "Admin" || (role === "IT Support" && assignedToId === currentUserId) || (role === "Employee" && creatorId === currentUserId);
+  const canDeleteAttachments = role === "Admin";
 
   const showEditPanel = useMemo(() => canEdit && ticket, [canEdit, ticket]);
 
@@ -72,25 +93,37 @@ function TicketDetails() {
       ticketService.getTicketHistory(id),
     ]);
 
-    setTicket(readRecord(ticketResponse, "ticket"));
+    const ticketRecord = readRecord(ticketResponse, "ticket");
+    setTicket(ticketRecord);
     setHistory(readCollection(historyResponse, "history"));
     setComments(readCollection(commentsResponse, "comments"));
     setForm({
-      title: readRecord(ticketResponse, "ticket")?.title || "",
-      description: readRecord(ticketResponse, "ticket")?.description || "",
-      categoryId: readRecord(ticketResponse, "ticket")?.categoryId || "",
-      priority: readRecord(ticketResponse, "ticket")?.priority || "Medium",
-      status: readRecord(ticketResponse, "ticket")?.status || "Open",
+      title: ticketRecord?.title || "",
+      description: ticketRecord?.description || "",
+      categoryId: ticketRecord?.categoryId || "",
+      priority: ticketRecord?.priority || "Medium",
+      status: ticketRecord?.status || "Open",
       comment: "",
     });
 
-    if (role === "Admin" || (role === "IT Support" && readRecord(ticketResponse, "ticket")?.assignedTo === user.id)) {
+    const creatorIdForTicket = Number(ticketRecord?.creator?.id ?? ticketRecord?.createdBy ?? 0) || null;
+    const assignedToIdForTicket = Number(ticketRecord?.assignedTo ?? ticketRecord?.assignedUser?.id ?? 0) || null;
+    const creatorDepartmentIdForTicket = Number(ticketRecord?.creator?.departmentId ?? 0) || null;
+
+    if (role === "Admin" || (role === "IT Support" && assignedToIdForTicket === currentUserId)) {
       const notesResponse = await ticketService.getInternalNotes(id);
       setInternalNotes(readCollection(notesResponse, "notes"));
     } else {
       setInternalNotes([]);
     }
-  }, [id, role, user.id]);
+
+    if (role === "Admin" || (role === "IT Support" && assignedToIdForTicket === currentUserId) || (role === "Employee" && creatorIdForTicket === currentUserId) || (role === "Manager" && creatorDepartmentIdForTicket === currentUserDepartmentId)) {
+      const attachmentsResponse = await ticketService.getAttachments(id);
+      setAttachments(readCollection(attachmentsResponse, "attachments"));
+    } else {
+      setAttachments([]);
+    }
+  }, [id, role, currentUserId, currentUserDepartmentId]);
 
   const handleFieldChange = (field) => (event) => {
     setForm((current) => ({
@@ -217,6 +250,78 @@ function TicketDetails() {
       setInternalNoteError(err?.response?.data?.message || "Unable to delete internal note.");
     } finally {
       setInternalNoteDeletingId(null);
+    }
+  };
+
+  const handleUploadAttachment = async () => {
+    if (!selectedAttachmentFile) {
+      setAttachmentError("Please choose a file to upload.");
+      return;
+    }
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/jpg", "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+    const allowedExtensions = [".jpg", ".jpeg", ".png", ".pdf", ".doc", ".docx"];
+    const maxSizeBytes = 10 * 1024 * 1024;
+    const fileName = selectedAttachmentFile.name?.toLowerCase() || "";
+    const fileType = selectedAttachmentFile.type || "";
+
+    const hasAllowedExtension = allowedExtensions.some((extension) => fileName.endsWith(extension));
+    const hasAllowedMimeType = allowedTypes.includes(fileType);
+
+    if (!hasAllowedExtension || !hasAllowedMimeType) {
+      setAttachmentError("File type not supported. Allowed: JPG, PNG, PDF, DOC, DOCX");
+      return;
+    }
+
+    if (selectedAttachmentFile.size > maxSizeBytes) {
+      setAttachmentError("File size exceeds 10MB limit");
+      return;
+    }
+
+    setAttachmentUploading(true);
+    setAttachmentError("");
+    setAttachmentSuccess("");
+
+    try {
+      await ticketService.uploadAttachment(id, selectedAttachmentFile);
+      await loadTicketDetails();
+      setSelectedAttachmentFile(null);
+      setAttachmentSuccess("Attachment uploaded successfully.");
+    } catch (err) {
+      setAttachmentError(err?.response?.data?.message || "Unable to upload attachment.");
+    } finally {
+      setAttachmentUploading(false);
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId) => {
+    setAttachmentDeletingId(attachmentId);
+    setAttachmentError("");
+    setAttachmentSuccess("");
+
+    try {
+      await ticketService.deleteAttachment(attachmentId);
+      await loadTicketDetails();
+      setAttachmentSuccess("Attachment deleted successfully.");
+    } catch (err) {
+      setAttachmentError(err?.response?.data?.message || "Unable to delete attachment.");
+    } finally {
+      setAttachmentDeletingId(null);
+    }
+  };
+
+  const handleDownloadAttachment = async (attachment) => {
+    try {
+      const response = await ticketService.downloadAttachment(attachment.id);
+      const blob = new Blob([response.data], { type: response.headers?.["content-type"] || "application/octet-stream" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = attachment.fileName || "attachment";
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setAttachmentError(err?.response?.data?.message || "Unable to download attachment.");
     }
   };
 
@@ -677,6 +782,86 @@ function TicketDetails() {
                 </button>
               </div>
             </div>
+          </div>
+        ) : null}
+
+        {canViewAttachments ? (
+          <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-6 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Attachments</h3>
+                <p className="mt-1 text-sm text-slate-500">Upload and review supporting files for this ticket.</p>
+              </div>
+            </div>
+
+            {attachments.length > 0 ? (
+              <div className="space-y-3">
+                {attachments.map((attachment) => (
+                  <div key={attachment.id} className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                      <div className="grid h-12 w-12 place-items-center rounded-3xl bg-slate-100 text-slate-700">
+                        <span className="text-sm font-semibold uppercase">{attachment.mimeType?.split("/")[1] || "FILE"}</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{attachment.fileName}</p>
+                        <p className="mt-1 text-sm text-slate-500">
+                          {attachment.user?.fullName || "Unknown user"} • {formatDateTime(attachment.uploadedAt)} • {(attachment.sizeBytes / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadAttachment(attachment)}
+                        className="rounded-2xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
+                      >
+                        Download
+                      </button>
+                      {canDeleteAttachments ? (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAttachment(attachment.id)}
+                          disabled={attachmentDeletingId === attachment.id}
+                          className="rounded-2xl bg-rose-100 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-200 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                        >
+                          {attachmentDeletingId === attachment.id ? "Deleting..." : "Delete"}
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">No files attached to this ticket.</div>
+            )}
+
+            {canUploadAttachments ? (
+              <div className="mt-5 border-t border-slate-200 pt-5">
+                <label className="block text-sm text-slate-700">
+                  Upload file
+                  <input
+                    type="file"
+                    onChange={(event) => setSelectedAttachmentFile(event.target.files?.[0] || null)}
+                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  />
+                </label>
+
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    {attachmentSuccess ? <p className="text-sm text-emerald-700">{attachmentSuccess}</p> : null}
+                    {attachmentError ? <p className="text-sm text-rose-700">{attachmentError}</p> : null}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleUploadAttachment}
+                    disabled={attachmentUploading}
+                    className="inline-flex items-center justify-center rounded-3xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                  >
+                    {attachmentUploading ? "Uploading..." : "Upload Attachment"}
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>

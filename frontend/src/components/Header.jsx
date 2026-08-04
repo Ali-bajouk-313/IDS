@@ -1,4 +1,5 @@
-import { FiBell, FiSearch, FiSettings } from "react-icons/fi";
+import { FiSearch, FiSettings } from "react-icons/fi";
+import NotificationBell from "./NotificationBell";
 
 function Header({ title, subtitle, userName, onLogout }) {
   return (
@@ -16,9 +17,7 @@ function Header({ title, subtitle, userName, onLogout }) {
             <input type="text" placeholder="Search" className="w-28 border-0 bg-transparent outline-none sm:w-40" />
           </label>
 
-          <button className="rounded-2xl border border-slate-200 p-2.5 text-slate-600 transition hover:bg-slate-100">
-            <FiBell className="h-5 w-5" />
-          </button>
+          <NotificationBell />
 
           <button className="rounded-2xl border border-slate-200 p-2.5 text-slate-600 transition hover:bg-slate-100">
             <FiSettings className="h-5 w-5" />

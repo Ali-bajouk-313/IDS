@@ -4,6 +4,7 @@ import { FiFilter, FiSearch } from "react-icons/fi";
 import DashboardLayout from "../../components/DashboardLayout";
 import DataTable from "../../components/DataTable";
 import LoadingSkeleton from "../../components/LoadingSkeleton";
+import Pagination from "../../components/Pagination";
 import StatCard from "../../components/StatCard";
 import ticketService from "../../services/ticketService";
 import api, { readCollection } from "../../api/axios.js";
@@ -15,6 +16,7 @@ const statusStyles = {
   Resolved: "bg-emerald-100 text-emerald-700",
   Closed: "bg-slate-100 text-slate-700",
 };
+const pageSizes = [10, 20, 50];
 
 function AdminTickets() {
   const [tickets, setTickets] = useState([]);
@@ -27,6 +29,8 @@ function AdminTickets() {
   const [supportAgents, setSupportAgents] = useState([]);
   const [assigningTicketId, setAssigningTicketId] = useState(null);
   const [selectedAgentId, setSelectedAgentId] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(pageSizes[0]);
 
   useEffect(() => {
     async function loadTickets() {
@@ -119,7 +123,17 @@ function AdminTickets() {
     return tickets.filter((ticket) => [ticket.ticketNumber, ticket.title, ticket.category?.categoryName, ticket.assignedUser?.fullName].some((value) => String(value || "").toLowerCase().includes(query)));
   }, [search, tickets]);
 
-  const rows = filteredTickets.map((ticket) => ({
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, status, priority, date]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredTickets.length / pageSize));
+  const paginatedTickets = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredTickets.slice(start, start + pageSize);
+  }, [filteredTickets, currentPage, pageSize]);
+
+  const rows = paginatedTickets.map((ticket) => ({
     ticketNumber: ticket.ticketNumber || `TICKET-${ticket.id}`,
     title: ticket.title,
     category: ticket.category?.categoryName || "-",
@@ -221,15 +235,28 @@ function AdminTickets() {
           ) : filteredTickets.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-600">No tickets found. Adjust your filters to see more results.</div>
           ) : (
-            <DataTable columns={[
-              { label: "Ticket #", key: "ticketNumber" },
-              { label: "Title", key: "title" },
-              { label: "Category", key: "category" },
-              { label: "Priority", key: "priority" },
-              { label: "Status", key: "status" },
-              { label: "Created", key: "createdDate" },
-              { label: "Actions", key: "actions" },
-            ]} rows={rows} emptyState="No tickets match your current filters." />
+            <>
+              <DataTable columns={[
+                { label: "Ticket #", key: "ticketNumber" },
+                { label: "Title", key: "title" },
+                { label: "Category", key: "category" },
+                { label: "Priority", key: "priority" },
+                { label: "Status", key: "status" },
+                { label: "Created", key: "createdDate" },
+                { label: "Actions", key: "actions" },
+              ]} rows={rows} emptyState="No tickets match your current filters." />
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                pageSize={pageSize}
+                pageSizes={pageSizes}
+                onPageSizeChange={(size) => {
+                  setPageSize(size);
+                  setCurrentPage(1);
+                }}
+              />
+            </>
           )}
         </div>
       </div>

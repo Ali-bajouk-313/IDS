@@ -38,12 +38,20 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/tickets/{ticket}/internal-notes', [\App\Http\Controllers\TicketInternalNoteController::class, 'index']);
     Route::post('/tickets/{ticket}/internal-notes', [\App\Http\Controllers\TicketInternalNoteController::class, 'store']);
     Route::delete('/internal-notes/{id}', [\App\Http\Controllers\TicketInternalNoteController::class, 'destroy']);
+    Route::get('/tickets/{ticket}/attachments', [\App\Http\Controllers\TicketAttachmentController::class, 'index']);
+    Route::post('/tickets/{ticket}/attachments', [\App\Http\Controllers\TicketAttachmentController::class, 'store']);
+    Route::delete('/attachments/{id}', [\App\Http\Controllers\TicketAttachmentController::class, 'destroy']);
+    Route::get('/attachments/{attachment}/download', [\App\Http\Controllers\TicketAttachmentController::class, 'download'])->name('ticket-attachments.download');
     Route::get('/activity-logs', [\App\Http\Controllers\ActivityLogController::class, 'index']);
+    Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index']);
+    Route::post('/notifications/{notification}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead']);
 
 });
 
 
 Route::middleware(['auth:api', 'role:Admin'])->group(function () {
+
+    Route::get('/dashboard/admin', [\App\Http\Controllers\DashboardController::class, 'admin']);
 
     Route::get('/admin/dashboard', function () {
 
@@ -60,6 +68,8 @@ Route::middleware(['auth:api', 'role:Admin'])->group(function () {
 
 Route::middleware(['auth:api','role:Employee'])->group(function () {
 
+    Route::get('/dashboard/employee', [\App\Http\Controllers\DashboardController::class, 'employee']);
+
     Route::get('/employee/dashboard', function () {
 
         return response()->json([
@@ -71,6 +81,8 @@ Route::middleware(['auth:api','role:Employee'])->group(function () {
 });
 
 Route::middleware(['auth:api','role:IT Support'])->group(function () {
+
+    Route::get('/dashboard/support', [\App\Http\Controllers\DashboardController::class, 'support']);
 
     Route::get('/support/dashboard', function () {
 
@@ -90,6 +102,8 @@ Route::middleware(['auth:api','role:IT Support'])->group(function () {
 
 
 Route::middleware(['auth:api','role:Manager'])->group(function () {
+
+    Route::get('/dashboard/manager', [\App\Http\Controllers\DashboardController::class, 'manager']);
 
     Route::get('/manager/dashboard', function () {
 

@@ -65,4 +65,9 @@ class Ticket extends Model
     {
         return $this->hasMany(TicketInternalNote::class, 'ticket_id', 'id');
     }
+
+    public function attachments()
+    {
+        return $this->hasMany(TicketAttachment::class, 'ticket_id', 'id');
+    }
 }

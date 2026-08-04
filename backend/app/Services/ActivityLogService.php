@@ -74,6 +74,11 @@ class ActivityLogService
         $this->insert($user->id, 'INTERNAL_NOTE_ADDED', "Internal note added to Ticket #{$ticket->id}", $ipAddress);
     }
 
+    public function logAttachmentAdded(User $user, Ticket $ticket, ?string $ipAddress): void
+    {
+        $this->insert($user->id, 'ATTACHMENT_ADDED', "{$user->role->roleName} added an attachment to Ticket #{$ticket->id}", $ipAddress);
+    }
+
     protected function insert(int $userId, string $action, string $description, ?string $ipAddress): void
     {
         if (!Schema::hasTable('activitylogs')) {

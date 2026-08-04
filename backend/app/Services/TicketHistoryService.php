@@ -48,6 +48,11 @@ class TicketHistoryService
         $this->insert($ticket->id, $actor->id, $ticket->status, $ticket->status, 'Internal note added');
     }
 
+    public function recordAttachmentAdded(Ticket $ticket, User $actor): void
+    {
+        $this->insert($ticket->id, $actor->id, $ticket->status, $ticket->status, 'Attachment added');
+    }
+
     public function recordUpdated(Ticket $ticket, User $actor): void
     {
         $this->insert($ticket->id, $actor->id, $ticket->status, $ticket->status, 'Ticket updated');

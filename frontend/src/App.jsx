@@ -17,6 +17,7 @@ import ITSupportTickets from "./pages/tickets/ITSupportTickets";
 import ManagerTickets from "./pages/tickets/ManagerTickets";
 import TicketDetails from "./pages/tickets/TicketDetails";
 import ActivityLogs from "./pages/admin/ActivityLogs";
+import NotificationsPage from "./pages/notifications/NotificationsPage";
 import ToastContainer from "./components/ToastContainer";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -74,6 +75,14 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/manager-dashboard/notifications"
+          element={
+            <ProtectedRoute allowedRoles={["Manager"]}>
+              <NotificationsPage role="Manager" title="Manager Notifications" subtitle="Review department activity and ticket updates." />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/it-dashboard"
@@ -121,6 +130,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["Employee"]}>
               <CreateTicket />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/employee-dashboard/notifications"
+          element={
+            <ProtectedRoute allowedRoles={["Employee"]}>
+              <NotificationsPage role="Employee" title="My Notifications" subtitle="Stay on top of your ticket updates." />
             </ProtectedRoute>
           }
         />

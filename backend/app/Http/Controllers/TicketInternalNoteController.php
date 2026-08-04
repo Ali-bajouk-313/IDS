@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Ticket;
 use App\Models\TicketInternalNote;
 use App\Services\ActivityLogService;
+use App\Services\NotificationService;
 use App\Services\TicketHistoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -13,7 +14,8 @@ class TicketInternalNoteController extends Controller
 {
     public function __construct(
         protected TicketHistoryService $ticketHistoryService,
-        protected ActivityLogService $activityLogService
+        protected ActivityLogService $activityLogService,
+        protected NotificationService $notificationService
     ) {
     }
 
@@ -80,6 +82,30 @@ class TicketInternalNoteController extends Controller
         $this->ticketHistoryService->recordInternalNoteAdded($ticketRecord, $user);
         $this->activityLogService->logInternalNoteAdded($user, $ticketRecord, $request->ip());
 
+        $recipients = [];
+        foreach ([
+            \App\Models\User::where('roleId', function ($query) {
+                $query->select('id')->from('roles')->where('roleName', 'Admin');
+            })->get(),
+            \App\Models\User::where('roleId', function ($query) {
+                $query->select('id')->from('roles')->where('roleName', 'IT Support');
+            })->get(),
+        ] as $users) {
+            foreach ($users as $recipient) {
+                if ($recipient->id !== $user->id) {
+                    $recipients[] = $recipient;
+                }
+            }
+        }
+
+        $this->notificationService->createForUsers(
+            $this->uniqueUsers($recipients),
+            'internal_note_added',
+            'Internal note added',
+            "A new internal note was added to ticket #{$ticketRecord->id}.",
+            ['ticket_id' => $ticketRecord->id]
+        );
+
         $internalNote->load('user:id,fullName');
 
         return response()->json([
@@ -126,5 +152,26 @@ class TicketInternalNoteController extends Controller
         }
 
         return false;
+    }
+
+    protected function uniqueUsers(array $users): array
+    {
+        $seen = [];
+        $result = [];
+
+        foreach ($users as $user) {
+            if (!$user instanceof \App\Models\User) {
+                continue;
+            }
+
+            if (isset($seen[$user->id])) {
+                continue;
+            }
+
+            $seen[$user->id] = true;
+            $result[] = $user;
+        }
+
+        return $result;
     }
 }

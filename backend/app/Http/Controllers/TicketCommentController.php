@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Ticket;
 use App\Models\TicketComment;
 use App\Services\ActivityLogService;
+use App\Services\NotificationService;
 use App\Services\TicketHistoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -13,7 +14,8 @@ class TicketCommentController extends Controller
 {
     public function __construct(
         protected TicketHistoryService $ticketHistoryService,
-        protected ActivityLogService $activityLogService
+        protected ActivityLogService $activityLogService,
+        protected NotificationService $notificationService
     )
     {
     }
@@ -84,6 +86,28 @@ class TicketCommentController extends Controller
         $this->ticketHistoryService->recordCommentAdded($ticketRecord, $user);
         $this->activityLogService->logCommentAdded($user, $ticketRecord, $request->ip());
 
+        $recipients = [];
+        if ($ticketRecord->createdBy) {
+            $creator = \App\Models\User::find($ticketRecord->createdBy);
+            if ($creator && $creator->id !== $user->id) {
+                $recipients[] = $creator;
+            }
+        }
+        if ($ticketRecord->assignedTo) {
+            $assignee = \App\Models\User::find($ticketRecord->assignedTo);
+            if ($assignee && $assignee->id !== $user->id) {
+                $recipients[] = $assignee;
+            }
+        }
+
+        $this->notificationService->createForUsers(
+            $this->uniqueUsers($recipients),
+            'ticket_comment',
+            'New ticket comment',
+            "A new comment was added to ticket #{$ticketRecord->id}.",
+            ['ticket_id' => $ticketRecord->id]
+        );
+
         $comment->load('user:id,fullName');
 
         return response()->json([
@@ -118,5 +142,26 @@ class TicketCommentController extends Controller
             'Employee' => $ticket->createdBy === $user->id,
             default => false,
         };
+    }
+
+    protected function uniqueUsers(array $users): array
+    {
+        $seen = [];
+        $result = [];
+
+        foreach ($users as $user) {
+            if (!$user instanceof \App\Models\User) {
+                continue;
+            }
+
+            if (isset($seen[$user->id])) {
+                continue;
+            }
+
+            $seen[$user->id] = true;
+            $result[] = $user;
+        }
+
+        return $result;
     }
 }

@@ -6,6 +6,7 @@ use App\Models\Ticket;
 use App\Models\TicketAssignment;
 use App\Models\User;
 use App\Services\ActivityLogService;
+use App\Services\NotificationService;
 use App\Services\TicketHistoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +17,8 @@ class TicketController extends Controller
 {
     public function __construct(
         protected TicketHistoryService $ticketHistoryService,
-        protected ActivityLogService $activityLogService
+        protected ActivityLogService $activityLogService,
+        protected NotificationService $notificationService
     )
     {
     }
@@ -142,6 +144,10 @@ class TicketController extends Controller
             return response()->json(['message' => 'Ticket not found'], 404);
         }
 
+        if ($ticket->status === 'In Progress') {
+            return response()->json(['message' => 'In Progress tickets cannot be edited'], 403);
+        }
+
         if ($user->role->roleName === 'Employee') {
             if ($ticket->createdBy !== $user->id || $ticket->assignedTo !== null) {
                 return response()->json(['message' => 'Forbidden'], 403);
@@ -264,6 +270,27 @@ class TicketController extends Controller
         $ticket->save();
 
         if ($oldStatus !== $ticket->status) {
+            $recipients = [];
+            if ($ticket->createdBy) {
+                $creator = User::find($ticket->createdBy);
+                if ($creator) {
+                    $recipients[] = $creator;
+                }
+            }
+            if ($ticket->assignedTo) {
+                $assignee = User::find($ticket->assignedTo);
+                if ($assignee) {
+                    $recipients[] = $assignee;
+                }
+            }
+
+            $this->notificationService->createForUsers(
+                $this->uniqueUsers($recipients),
+                'ticket_status_changed',
+                'Ticket status updated',
+                "Ticket #{$ticket->id} status changed to {$ticket->status}.",
+                ['ticket_id' => $ticket->id, 'status' => $ticket->status]
+            );
             if ($ticket->status === 'Closed') {
                 $this->ticketHistoryService->recordClosed($ticket, $user, $oldStatus);
             } elseif ($oldStatus === 'Closed' && $ticket->status === 'Open') {
@@ -336,6 +363,14 @@ class TicketController extends Controller
 
         $this->ticketHistoryService->recordAssigned($ticketRecord, $user, $assignedUser->fullName, $oldStatus);
         $this->activityLogService->logTicketAssigned($user, $ticketRecord, $assignedUser->fullName, $request->ip());
+
+        $this->notificationService->createForUser(
+            $assignedUser,
+            'ticket_assigned',
+            'Ticket assigned to you',
+            "Ticket #{$ticketRecord->id} has been assigned to you.",
+            ['ticket_id' => $ticketRecord->id]
+        );
 
         if ($oldStatus !== $ticketRecord->status) {
             $this->ticketHistoryService->recordStatusChanged($ticketRecord, $user, $oldStatus, $ticketRecord->status);
@@ -579,5 +614,26 @@ class TicketController extends Controller
             'assigned_by' => $assignedBy,
             'action' => $action,
         ]);
+    }
+
+    protected function uniqueUsers(array $users): array
+    {
+        $seen = [];
+        $result = [];
+
+        foreach ($users as $user) {
+            if (!$user instanceof User) {
+                continue;
+            }
+
+            if (isset($seen[$user->id])) {
+                continue;
+            }
+
+            $seen[$user->id] = true;
+            $result[] = $user;
+        }
+
+        return $result;
     }
 }

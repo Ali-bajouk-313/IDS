@@ -146,6 +146,48 @@ class TicketWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_admin_cannot_edit_in_progress_ticket(): void
+    {
+        $adminRole = Role::create(['roleName' => 'Admin']);
+        $admin = User::create([
+            'roleId' => $adminRole->id,
+            'fullName' => 'Admin Two',
+            'email' => 'admin2@example.com',
+            'password' => 'secret123',
+            'status' => 'Active',
+        ]);
+
+        $employeeRole = Role::create(['roleName' => 'Employee']);
+        $employee = User::create([
+            'roleId' => $employeeRole->id,
+            'fullName' => 'Employee Four',
+            'email' => 'employee4@example.com',
+            'password' => 'secret123',
+            'status' => 'Active',
+        ]);
+
+        $ticket = Ticket::create([
+            'ticketNumber' => 'TICKET-00004',
+            'title' => 'Network outage',
+            'description' => 'Intermittent connectivity.
+',
+            'categoryId' => 1,
+            'createdBy' => $employee->id,
+            'assignedTo' => null,
+            'priority' => 'High',
+            'status' => 'In Progress',
+        ]);
+
+        $this->actingAs($admin, 'api');
+
+        $response = $this->putJson("/api/tickets/{$ticket->id}", [
+            'title' => 'Network outage updated',
+        ]);
+
+        $response->assertStatus(403)
+            ->assertJsonPath('message', 'In Progress tickets cannot be edited');
+    }
+
     public function test_admin_can_close_resolved_ticket(): void
     {
         $adminRole = Role::create(['roleName' => 'Admin']);
