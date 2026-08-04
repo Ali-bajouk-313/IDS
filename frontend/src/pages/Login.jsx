@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiEye, FiEyeOff, FiShield } from "react-icons/fi";
-import axios from "axios";
+import api from "../api/axios";
 import backgroundImage from "../assets/it-ops-bg.svg";
 
 function Login() {
@@ -18,7 +18,7 @@ function Login() {
     setLoading(true);
 
     try {
-      const response = await axios.post("/api/login", {
+      const response = await api.post("/login", {
         email,
         password,
       });

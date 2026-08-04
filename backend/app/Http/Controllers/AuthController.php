@@ -171,58 +171,56 @@ Mail::to($user->email)
 
 public function verifyEmail(Request $request)
 {
-    // Validate request
+    $email = $request->query('email', $request->input('email'));
+    $token = $request->query('token', $request->input('token'));
+
+    $request->merge([
+        'email' => $email,
+        'token' => $token,
+    ]);
+
     $request->validate([
         'email' => 'required|email',
         'token' => 'required'
     ]);
 
+    $normalizedEmail = strtolower($email);
 
-    // Check token exists
-    $verification = DB::table('email_verification_tokens')
-        ->where('email', $request->email)
-        ->where('token', $request->token)
-        ->first();
-
-
-    if (!$verification) {
-
-        return response()->json([
-            'message' => 'Invalid verification token'
-        ], 400);
-
-    }
-
-
-    // Find user
-    $user = User::where('email', $request->email)->first();
-
+    $user = User::where('email', $normalizedEmail)->first();
 
     if (!$user) {
-
         return response()->json([
             'message' => 'User not found'
         ], 404);
-
     }
 
+    if (!is_null($user->email_verified_at)) {
+        return response()->json([
+            'message' => 'Email is already verified'
+        ]);
+    }
 
-    // Update email verification status
+    $verification = DB::table('email_verification_tokens')
+        ->where('email', $normalizedEmail)
+        ->where('token', $token)
+        ->first();
+
+    if (!$verification) {
+        return response()->json([
+            'message' => 'Invalid verification token'
+        ], 400);
+    }
+
     $user->email_verified_at = now();
-
     $user->save();
 
-
-    // Remove token after successful verification
     DB::table('email_verification_tokens')
-        ->where('email', $request->email)
+        ->where('email', $normalizedEmail)
         ->delete();
-
 
     return response()->json([
         'message' => 'Email verified successfully'
     ]);
-
 }
 
     public function me()

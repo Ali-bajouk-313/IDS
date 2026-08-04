@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { FiCheckCircle, FiShield } from "react-icons/fi";
-import axios from "axios";
+import api from "../api/axios";
 import backgroundImage from "../assets/it-ops-bg.svg";
 
 function VerifyEmail() {
@@ -32,8 +32,9 @@ function VerifyEmail() {
     setMessage("");
 
     try {
-      const response = await axios.get("/api/verify-email", {
-        params: { email, token },
+      const response = await api.post("/verify-email", {
+        email,
+        token,
       });
 
       setStatus("success");

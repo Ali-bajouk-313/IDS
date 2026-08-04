@@ -38,6 +38,7 @@ function DashboardLayout({ children, role, title, subtitle }) {
       return [
         { name: "Dashboard", path: "/it-dashboard", icon: FiHome },
         { name: "Assigned Tickets", path: "/it-dashboard/tickets", icon: FiMessageSquare },
+        { name: "Activity Logs", path: "/it-dashboard/activity-logs", icon: FiActivity },
         { name: "Knowledge Base", path: "/it-dashboard/knowledge", icon: FiLayers },
         { name: "Reports", path: "/it-dashboard/reports", icon: FiBarChart2 },
       ];
@@ -62,12 +63,12 @@ function DashboardLayout({ children, role, title, subtitle }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.10),_transparent_28%),linear-gradient(135deg,_#f8fafc_0%,_#f1f5f9_100%)] text-slate-800">
       <Sidebar role={role} menus={menus} />
       <div className="ml-0 lg:ml-72">
         <div className="p-4 sm:p-6 lg:p-8">
           <Header title={title} subtitle={subtitle} userName={userName} onLogout={handleLogout} />
-          <div className="mt-6">{children}</div>
+          <div className="mt-6 space-y-6">{children}</div>
         </div>
       </div>
     </div>

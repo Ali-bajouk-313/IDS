@@ -125,3 +125,4 @@ Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'
 Route::post('/reset-password', [PasswordResetController::class, 'resetPassword']);
 
 Route::get('/verify-email', [AuthController::class, 'verifyEmail']);
+Route::post('/verify-email', [AuthController::class, 'verifyEmail']);

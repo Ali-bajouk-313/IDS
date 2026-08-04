@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { FiFilter, FiSearch } from "react-icons/fi";
 import DashboardLayout from "../../components/DashboardLayout";
 import DataTable from "../../components/DataTable";
+import LoadingSkeleton from "../../components/LoadingSkeleton";
 import ticketService from "../../services/ticketService";
+import { readCollection } from "../../api/axios.js";
 
 const statusOptions = ["", "Open", "Assigned", "In Progress", "Resolved", "Closed"];
 const priorityOptions = ["", "Low", "Medium", "High", "Critical"];
@@ -31,7 +34,7 @@ function EmployeeTickets() {
 
       try {
         const response = await ticketService.getTickets({ status, priority, date });
-        setTickets(response.data.tickets || []);
+        setTickets(readCollection(response, "tickets"));
       } catch (err) {
         setError(err?.response?.data?.message || "Unable to load tickets. Please refresh.");
       } finally {
@@ -146,10 +149,10 @@ function EmployeeTickets() {
           <div className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">{error}</div>
         ) : null}
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-slate-900">My tickets</h3>
+              <h3 className="text-lg font-semibold tracking-tight text-slate-900">My tickets</h3>
               <p className="mt-1 text-sm text-slate-500">{filteredTickets.length} ticket{filteredTickets.length === 1 ? "" : "s"} found.</p>
             </div>
             <Link
@@ -161,13 +164,22 @@ function EmployeeTickets() {
           </div>
 
           {loading ? (
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-600">Loading tickets…</div>
+            <LoadingSkeleton variant="table" rows={6} />
           ) : filteredTickets.length === 0 ? (
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-600">No tickets found. Adjust the filters or create a new ticket.</div>
+            <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-600">No tickets found. Adjust the filters or create a new ticket.</div>
           ) : (
             <DataTable
-              columns={["Ticket #", "Title", "Category", "Priority", "Status", "Created", "Actions"]}
+              columns={[
+                { label: "Ticket #", key: "ticketNumber" },
+                { label: "Title", key: "title" },
+                { label: "Category", key: "category" },
+                { label: "Priority", key: "priority" },
+                { label: "Status", key: "status" },
+                { label: "Created", key: "createdDate" },
+                { label: "Actions", key: "actions" },
+              ]}
               rows={rows}
+              emptyState="No tickets match your current filters."
             />
           )}
         </div>

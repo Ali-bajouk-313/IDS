@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../../components/DashboardLayout";
 import ticketService from "../../services/ticketService";
+import { readCollection } from "../../api/axios.js";
 
 const priorityOptions = ["Low", "Medium", "High", "Critical"];
 const fallbackCategories = [
@@ -27,8 +28,8 @@ function CreateTicket() {
     async function loadCategories() {
       try {
         const response = await ticketService.getCategories();
-        setCategories(response.data?.categories ?? response.data ?? fallbackCategories);
-        if (!response.data?.categories && !response.data) {
+        setCategories(readCollection(response, "categories").length > 0 ? readCollection(response, "categories") : fallbackCategories);
+        if (readCollection(response, "categories").length === 0) {
           setCategories(fallbackCategories);
         }
       } catch (err) {

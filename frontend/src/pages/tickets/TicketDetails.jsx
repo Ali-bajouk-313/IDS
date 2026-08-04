@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import DashboardLayout from "../../components/DashboardLayout";
 import ticketService from "../../services/ticketService";
+import { readCollection, readRecord } from "../../api/axios.js";
 
 const statusOptions = ["Open", "Assigned", "In Progress", "Resolved", "Closed"];
 const priorityOptions = ["Low", "Medium", "High", "Critical"];
@@ -71,21 +72,21 @@ function TicketDetails() {
       ticketService.getTicketHistory(id),
     ]);
 
-    setTicket(ticketResponse.data.ticket);
-    setHistory(historyResponse.data.history || []);
-    setComments(commentsResponse.data.comments || []);
+    setTicket(readRecord(ticketResponse, "ticket"));
+    setHistory(readCollection(historyResponse, "history"));
+    setComments(readCollection(commentsResponse, "comments"));
     setForm({
-      title: ticketResponse.data.ticket.title || "",
-      description: ticketResponse.data.ticket.description || "",
-      categoryId: ticketResponse.data.ticket.categoryId || "",
-      priority: ticketResponse.data.ticket.priority || "Medium",
-      status: ticketResponse.data.ticket.status || "Open",
+      title: readRecord(ticketResponse, "ticket")?.title || "",
+      description: readRecord(ticketResponse, "ticket")?.description || "",
+      categoryId: readRecord(ticketResponse, "ticket")?.categoryId || "",
+      priority: readRecord(ticketResponse, "ticket")?.priority || "Medium",
+      status: readRecord(ticketResponse, "ticket")?.status || "Open",
       comment: "",
     });
 
-    if (role === "Admin" || (role === "IT Support" && ticketResponse.data.ticket.assignedTo === user.id)) {
+    if (role === "Admin" || (role === "IT Support" && readRecord(ticketResponse, "ticket")?.assignedTo === user.id)) {
       const notesResponse = await ticketService.getInternalNotes(id);
-      setInternalNotes(notesResponse.data.notes || []);
+      setInternalNotes(readCollection(notesResponse, "notes"));
     } else {
       setInternalNotes([]);
     }
@@ -252,7 +253,10 @@ function TicketDetails() {
   if (loading) {
     return (
       <DashboardLayout role={role} title="Ticket Details" subtitle="Review your ticket information.">
-        <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm text-center text-slate-600">Loading ticket details…</div>
+        <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-8 shadow-[0_12px_32px_rgba(15,23,42,0.06)] text-center text-slate-600">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-slate-200 border-t-blue-600 animate-spin" />
+          <p className="mt-4 text-sm font-medium">Loading ticket details…</p>
+        </div>
       </DashboardLayout>
     );
   }
@@ -260,7 +264,7 @@ function TicketDetails() {
   if (error) {
     return (
       <DashboardLayout role={role} title="Ticket Details" subtitle="Review your ticket information.">
-        <div className="rounded-3xl border border-rose-200 bg-rose-50 p-8 text-center text-rose-700">{error}</div>
+        <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 p-8 text-center text-rose-700 shadow-sm">{error}</div>
       </DashboardLayout>
     );
   }
@@ -268,7 +272,7 @@ function TicketDetails() {
   if (!ticket) {
     return (
       <DashboardLayout role={role} title="Ticket Details" subtitle="Review your ticket information.">
-        <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm text-center text-slate-600">Ticket not found.</div>
+        <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-8 shadow-[0_12px_32px_rgba(15,23,42,0.06)] text-center text-slate-600">Ticket not found.</div>
       </DashboardLayout>
     );
   }
@@ -276,7 +280,7 @@ function TicketDetails() {
   return (
     <DashboardLayout role={role} title={`Ticket ${ticket.ticketNumber}`} subtitle="View full ticket details.">
       <div className="space-y-6">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-6 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
           <div className="grid gap-6 lg:grid-cols-2">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Title</p>
@@ -312,7 +316,7 @@ function TicketDetails() {
 
         <div className="grid gap-6 lg:grid-cols-[1.8fr_1fr]">
           <div className="space-y-6">
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-6 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-slate-900">Ticket details</h3>
@@ -366,7 +370,7 @@ function TicketDetails() {
             </div>
 
             {showEditPanel ? (
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+              <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-6 shadow-sm">
                 <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="text-lg font-semibold text-slate-900">Edit ticket</h3>
@@ -611,7 +615,7 @@ function TicketDetails() {
         </div>
 
         {canViewInternalNotes ? (
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-6 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
             <div className="mb-5">
               <h3 className="text-lg font-semibold text-slate-900">Internal Notes</h3>
               <p className="mt-1 text-sm text-slate-500">Private notes visible only to Admin and the assigned IT Support technician.</p>

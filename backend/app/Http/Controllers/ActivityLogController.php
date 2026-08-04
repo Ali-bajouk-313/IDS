@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Ticket;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class ActivityLogController extends Controller
@@ -10,11 +12,7 @@ class ActivityLogController extends Controller
     {
         $user = auth('api')->user();
 
-        if ($user->role->roleName !== 'Admin') {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
-
-        $logs = DB::table('activitylogs')
+        $query = DB::table('activitylogs')
             ->join('users', 'activitylogs.userId', '=', 'users.id')
             ->select(
                 'activitylogs.id',
@@ -25,7 +23,27 @@ class ActivityLogController extends Controller
                 'users.id as userId',
                 'users.fullName',
                 'users.email'
-            )
+            );
+
+        if ($user->role->roleName === 'Admin') {
+            // Admin can see all activity logs.
+        } elseif ($user->role->roleName === 'IT Support') {
+            $ticketIds = Ticket::where('assignedTo', $user->id)->pluck('id');
+
+            if ($ticketIds->isEmpty()) {
+                return response()->json(['logs' => []]);
+            }
+
+            $query->where(function ($subQuery) use ($ticketIds) {
+                foreach ($ticketIds as $ticketId) {
+                    $subQuery->orWhere('activitylogs.description', 'like', '%' . "Ticket #{$ticketId}" . '%');
+                }
+            });
+        } else {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $logs = $query
             ->orderBy('activitylogs.createdAt', 'desc')
             ->get()
             ->map(function ($log) {
@@ -39,7 +57,7 @@ class ActivityLogController extends Controller
                     'action' => $log->action,
                     'description' => $log->description,
                     'ipAddress' => $log->ipAddress,
-                    'createdAt' => $log->createdAt,
+                    'createdAt' => $log->createdAt ? Carbon::parse($log->createdAt)->toIso8601String() : null,
                 ];
             })
             ->values();

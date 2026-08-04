@@ -14,7 +14,7 @@ function ProtectedRoute({ children, allowedRoles }) {
     // No login
     if(!token || !user){
 
-        return <Navigate to="/" />;
+        return <Navigate to="/login" replace />;
 
     }
 
@@ -22,7 +22,7 @@ function ProtectedRoute({ children, allowedRoles }) {
     // Role not allowed
     if(!allowedRoles.includes(user.role)){
 
-        return <Navigate to="/" />;
+        return <Navigate to="/login" replace />;
 
     }
 

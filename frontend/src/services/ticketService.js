@@ -1,16 +1,5 @@
 import api from "../api/axios.js";
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-
-  if (token) {
-    config.headers = config.headers || {};
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-
-  return config;
-});
-
 const ticketService = {
   getTickets(filters = {}) {
     const params = {};

@@ -154,14 +154,37 @@ class ActivityLogTest extends TestCase
         $this->getJson('/api/activity-logs')->assertStatus(403);
     }
 
-    public function test_it_support_is_forbidden_from_viewing_logs(): void
+    public function test_it_support_sees_only_assigned_ticket_activity(): void
     {
         $roles = $this->seedRoles();
-        $support = $this->makeUser($roles['IT Support'], 'support-logs@example.com', 'Support Logs', 1);
+        $employee = $this->makeUser($roles['Employee'], 'support-view-employee@example.com', 'Support View Employee', 1);
+        $support = $this->makeUser($roles['IT Support'], 'support-view@example.com', 'Support View', 1);
+        $ticket = $this->makeTicket('TICKET-90001', $employee->id, $support->id, 'Assigned');
+
+        DB::table('activitylogs')->insert([
+            [
+                'userId' => $employee->id,
+                'action' => 'ASSIGN_TICKET',
+                'description' => "Admin assigned Ticket #{$ticket->id} to {$support->fullName}",
+                'ipAddress' => '127.0.0.1',
+                'createdAt' => now(),
+            ],
+            [
+                'userId' => $employee->id,
+                'action' => 'COMMENT_ADDED',
+                'description' => 'Employee added comment to Ticket #99999',
+                'ipAddress' => '127.0.0.1',
+                'createdAt' => now(),
+            ],
+        ]);
 
         $this->actingAs($support, 'api');
 
-        $this->getJson('/api/activity-logs')->assertStatus(403);
+        $response = $this->getJson('/api/activity-logs');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(1, 'logs')
+            ->assertJsonPath('logs.0.description', "Admin assigned Ticket #{$ticket->id} to {$support->fullName}");
     }
 
     public function test_login_creates_activity(): void

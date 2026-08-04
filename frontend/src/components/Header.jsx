@@ -2,11 +2,11 @@ import { FiBell, FiSearch, FiSettings } from "react-icons/fi";
 
 function Header({ title, subtitle, userName, onLogout }) {
   return (
-    <header className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+    <header className="flex flex-col gap-4 rounded-[1.5rem] border border-slate-200 bg-white/90 p-4 shadow-[0_12px_32px_rgba(15,23,42,0.06)] backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:p-6">
       <div>
-        <p className="text-sm font-medium text-blue-600">Operations Center</p>
-        <h1 className="text-2xl font-semibold text-slate-900">{title}</h1>
-        <p className="text-sm text-slate-500">{subtitle}</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-blue-600">Operations Center</p>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">{title}</h1>
+        <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -25,7 +25,7 @@ function Header({ title, subtitle, userName, onLogout }) {
           </button>
         </div>
 
-        <div className="flex items-center gap-3 rounded-2xl bg-slate-900 px-3 py-2 text-white">
+        <div className="flex items-center gap-3 rounded-2xl bg-slate-900 px-3 py-2 text-white shadow-lg shadow-slate-900/20">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 font-semibold">
             {userName?.charAt(0) || "U"}
           </div>

@@ -6,7 +6,7 @@ function Sidebar({ role, menus }) {
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 flex w-72 flex-col border-r border-slate-800 bg-slate-950 px-5 py-6 text-slate-200 shadow-2xl lg:translate-x-0">
-      <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/80 px-3 py-3">
+      <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/80 px-3 py-3 shadow-lg shadow-slate-950/30">
         <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-white">
           <FiShield className="h-5 w-5" />
         </div>
