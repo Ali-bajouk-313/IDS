@@ -85,6 +85,19 @@ const ticketService = {
   },
 
   createTicket(data) {
+    if (data && data.file) {
+      const formData = new FormData();
+      formData.append('title', data.title);
+      formData.append('description', data.description);
+      formData.append('categoryId', data.categoryId);
+      formData.append('priority', data.priority);
+      formData.append('file', data.file);
+
+      return api.post("/tickets", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    }
+
     return api.post("/tickets", data);
   },
 
@@ -110,6 +123,10 @@ const ticketService = {
 
   unassignTicket(id) {
     return api.post(`/tickets/${id}/unassign`);
+  },
+
+  returnTicketToAdmin(id, reason) {
+    return api.post(`/tickets/${id}/return-to-admin`, { reason });
   },
 
   getMyAssignedTickets(filters = {}) {

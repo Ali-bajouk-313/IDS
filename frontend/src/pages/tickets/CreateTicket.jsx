@@ -18,6 +18,7 @@ function CreateTicket() {
   const [categoryId, setCategoryId] = useState("");
   const [priority, setPriority] = useState("Medium");
   const [categories, setCategories] = useState([]);
+  const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetchingCategories, setFetchingCategories] = useState(true);
   const [error, setError] = useState("");
@@ -60,6 +61,7 @@ function CreateTicket() {
         description,
         categoryId,
         priority,
+        file,
       });
 
       setSuccess("Ticket created successfully.");
@@ -69,6 +71,35 @@ function CreateTicket() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Client-side allowed file types and size (10MB)
+  const allowedExtensions = ['jpg','jpeg','png','gif','pdf','doc','docx','xls','xlsx','csv','txt','zip','rar'];
+  const maxSizeBytes = 10 * 1024 * 1024;
+
+  const handleFileChange = (e) => {
+    setError("");
+    const f = e.target.files[0] || null;
+    if (!f) {
+      setFile(null);
+      return;
+    }
+
+    if (f.size > maxSizeBytes) {
+      setError('Attachment exceeds maximum size of 10 MB.');
+      setFile(null);
+      return;
+    }
+
+    const name = f.name || '';
+    const ext = name.split('.').pop().toLowerCase();
+    if (!allowedExtensions.includes(ext)) {
+      setError('Attachment type not allowed. Allowed types: ' + allowedExtensions.join(', '));
+      setFile(null);
+      return;
+    }
+
+    setFile(f);
   };
 
   return (
@@ -91,6 +122,19 @@ function CreateTicket() {
               placeholder="Enter ticket title"
               className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
             />
+          </div>
+
+          <div>
+            <label htmlFor="file" className="mb-2 block text-sm font-medium text-slate-700">
+              Attachment (optional)
+            </label>
+            <input
+              id="file"
+              type="file"
+              onChange={handleFileChange}
+              className="w-full text-sm text-slate-700"
+            />
+            {file && <p className="mt-2 text-sm text-slate-500">Selected: {file.name}</p>}
           </div>
 
           <div>

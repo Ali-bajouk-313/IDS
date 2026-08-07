@@ -15,6 +15,8 @@ class TicketAssignmentTest extends TestCase
     {
         parent::setUp();
 
+        Schema::dropIfExists('notifications');
+        Schema::dropIfExists('activitylogs');
         Schema::dropIfExists('ticket_assignments');
         Schema::dropIfExists('tickethistory');
         Schema::dropIfExists('tickets');
@@ -39,6 +41,7 @@ class TicketAssignmentTest extends TestCase
             $table->string('status')->default('Active');
             $table->timestamp('createdAt')->nullable();
             $table->timestamp('updatedAt')->nullable();
+            $table->timestamp('email_verified_at')->nullable();
         });
 
         Schema::create('categories', function ($table) {
@@ -81,6 +84,27 @@ class TicketAssignmentTest extends TestCase
             $table->string('newStatus')->nullable();
             $table->text('comment')->nullable();
             $table->timestamp('changedAt')->nullable();
+        });
+
+        Schema::create('activitylogs', function ($table) {
+            $table->id();
+            $table->unsignedBigInteger('userId');
+            $table->string('action', 100)->nullable();
+            $table->text('description')->nullable();
+            $table->string('ipAddress', 50)->nullable();
+            $table->timestamp('createdAt')->nullable();
+        });
+
+        Schema::create('notifications', function ($table) {
+            $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->string('type');
+            $table->string('title');
+            $table->text('message');
+            $table->string('assigned_support_name', 150)->nullable();
+            $table->json('data')->nullable();
+            $table->timestamp('read_at')->nullable();
+            $table->timestamps();
         });
     }
 
@@ -208,7 +232,7 @@ class TicketAssignmentTest extends TestCase
         $response->assertStatus(409);
     }
 
-    public function test_only_assigned_it_support_can_unassign_ticket(): void
+    public function test_only_assigned_it_support_can_return_ticket_to_admin(): void
     {
         $adminRole = Role::create(['roleName' => 'Admin', 'description' => 'Administrator']);
         $itSupportRole = Role::create(['roleName' => 'IT Support', 'description' => 'Support staff']);
@@ -218,6 +242,22 @@ class TicketAssignmentTest extends TestCase
             'roleId' => $adminRole->id,
             'fullName' => 'Admin User',
             'email' => 'admin3@example.com',
+            'password' => 'secret123',
+            'status' => 'Active',
+        ]);
+
+        $secondAdmin = User::create([
+            'roleId' => $adminRole->id,
+            'fullName' => 'Second Admin User',
+            'email' => 'admin4@example.com',
+            'password' => 'secret123',
+            'status' => 'Active',
+        ]);
+
+        $otherSupport = User::create([
+            'roleId' => $itSupportRole->id,
+            'fullName' => 'Other Support Agent',
+            'email' => 'support4@example.com',
             'password' => 'secret123',
             'status' => 'Active',
         ]);
@@ -257,10 +297,88 @@ class TicketAssignmentTest extends TestCase
         $this->postJson("/api/tickets/{$ticket->id}/unassign")
             ->assertStatus(403);
 
+        $this->actingAs($otherSupport, 'api');
+        $this->postJson("/api/tickets/{$ticket->id}/unassign", ['reason' => 'Not my ticket'])
+            ->assertStatus(403);
+
         $this->actingAs($support, 'api');
-        $this->postJson("/api/tickets/{$ticket->id}/unassign")
+        $this->postJson("/api/tickets/{$ticket->id}/unassign", ['reason' => 'Requires network team intervention'])
             ->assertStatus(200)
             ->assertJsonPath('ticket.assignedTo', null)
             ->assertJsonPath('ticket.status', 'Open');
+
+        $this->assertDatabaseHas('ticket_assignments', [
+            'ticket_id' => $ticket->id,
+            'old_assigned_to' => $support->id,
+            'new_assigned_to' => null,
+            'assigned_by' => $support->id,
+            'action' => 'RETURNED_TO_ADMIN',
+        ]);
+
+        $this->assertDatabaseHas('tickethistory', [
+            'ticketId' => $ticket->id,
+            'changedBy' => $support->id,
+            'comment' => 'Support Agent returned ticket to Admin. Reason: Requires network team intervention',
+        ]);
+
+        $this->assertDatabaseHas('activitylogs', [
+            'userId' => $support->id,
+            'action' => 'RETURN_TO_ADMIN',
+        ]);
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $admin->id,
+            'type' => 'ticket_returned_to_admin',
+            'title' => 'Ticket returned to Admin queue',
+        ]);
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $secondAdmin->id,
+            'type' => 'ticket_returned_to_admin',
+            'title' => 'Ticket returned to Admin queue',
+        ]);
+    }
+
+    public function test_return_to_admin_requires_reason(): void
+    {
+        $itSupportRole = Role::create(['roleName' => 'IT Support', 'description' => 'Support staff']);
+        $employeeRole = Role::create(['roleName' => 'Employee', 'description' => 'Employee']);
+
+        $support = User::create([
+            'roleId' => $itSupportRole->id,
+            'fullName' => 'Support Agent',
+            'email' => 'support5@example.com',
+            'password' => 'secret123',
+            'status' => 'Active',
+        ]);
+
+        $employee = User::create([
+            'roleId' => $employeeRole->id,
+            'fullName' => 'Employee User',
+            'email' => 'employee5@example.com',
+            'password' => 'secret123',
+            'status' => 'Active',
+        ]);
+
+        $category = \App\Models\Category::create([
+            'categoryName' => 'Network',
+        ]);
+
+        $ticket = Ticket::create([
+            'ticketNumber' => 'TICKET-00004',
+            'title' => 'VPN issue',
+            'description' => 'VPN is unstable.',
+            'categoryId' => $category->id,
+            'createdBy' => $employee->id,
+            'assignedTo' => $support->id,
+            'priority' => 'Medium',
+            'status' => 'Assigned',
+        ]);
+
+        $this->actingAs($support, 'api');
+
+        $this->postJson("/api/tickets/{$ticket->id}/return-to-admin", ['reason' => ''])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['reason']);
     }
 }

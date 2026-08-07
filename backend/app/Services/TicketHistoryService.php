@@ -28,6 +28,18 @@ class TicketHistoryService
         $this->insert($ticket->id, $actor->id, $oldStatus, $ticket->status, 'Ticket returned to assignment queue');
     }
 
+    public function recordReturnedToAdmin(Ticket $ticket, User $actor, ?string $oldStatus, string $reason): void
+    {
+        $safeReason = trim($reason);
+        $this->insert(
+            $ticket->id,
+            $actor->id,
+            $oldStatus,
+            $ticket->status,
+            "{$actor->fullName} returned ticket to Admin. Reason: {$safeReason}"
+        );
+    }
+
     public function recordStatusChanged(Ticket $ticket, User $actor, string $oldStatus, string $newStatus): void
     {
         $this->insert($ticket->id, $actor->id, $oldStatus, $newStatus, 'Status changed');

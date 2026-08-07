@@ -54,6 +54,12 @@ class ActivityLogService
         $this->insert($user->id, 'UNASSIGN_TICKET', "{$user->role->roleName} unassigned Ticket #{$ticket->id}", $ipAddress);
     }
 
+    public function logTicketReturnedToAdmin(User $user, Ticket $ticket, string $reason, ?string $ipAddress): void
+    {
+        $safeReason = trim($reason);
+        $this->insert($user->id, 'RETURN_TO_ADMIN', "{$user->role->roleName} {$user->fullName} returned Ticket #{$ticket->id} to Admin. Reason: {$safeReason}", $ipAddress);
+    }
+
     public function logStatusChanged(User $user, Ticket $ticket, string $oldStatus, string $newStatus, ?string $ipAddress): void
     {
         $this->insert($user->id, 'STATUS_CHANGED', "{$user->role->roleName} changed Ticket #{$ticket->id} status from {$oldStatus} to {$newStatus}", $ipAddress);

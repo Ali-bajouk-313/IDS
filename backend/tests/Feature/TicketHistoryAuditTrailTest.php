@@ -176,14 +176,16 @@ class TicketHistoryAuditTrailTest extends TestCase
 
         $this->actingAs($support, 'api');
 
-        $response = $this->postJson("/api/tickets/{$ticket->id}/unassign");
+        $response = $this->postJson("/api/tickets/{$ticket->id}/unassign", [
+            'reason' => 'Escalating back to admin for reassignment',
+        ]);
 
         $response->assertStatus(200);
 
         $this->assertDatabaseHas('tickethistory', [
             'ticketId' => $ticket->id,
             'changedBy' => $support->id,
-            'comment' => 'Ticket returned to assignment queue',
+            'comment' => 'Support Unassign returned ticket to Admin. Reason: Escalating back to admin for reassignment',
         ]);
     }
 

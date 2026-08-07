@@ -32,6 +32,7 @@ Route::middleware('auth:api')->group(function () {
     Route::delete('/tickets/{id}', [\App\Http\Controllers\TicketController::class, 'destroy']);
     Route::post('/tickets/{ticket}/assign', [\App\Http\Controllers\TicketController::class, 'assignTicket']);
     Route::post('/tickets/{ticket}/unassign', [\App\Http\Controllers\TicketController::class, 'unassignTicket']);
+    Route::post('/tickets/{ticket}/return-to-admin', [\App\Http\Controllers\TicketController::class, 'returnToAdmin']);
     Route::get('/tickets/{ticket}/history', [\App\Http\Controllers\TicketController::class, 'history']);
     Route::get('/tickets/{ticket}/comments', [\App\Http\Controllers\TicketCommentController::class, 'index']);
     Route::post('/tickets/{ticket}/comments', [\App\Http\Controllers\TicketCommentController::class, 'store']);

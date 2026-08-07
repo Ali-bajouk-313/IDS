@@ -67,8 +67,9 @@ class TicketAttachmentController extends Controller
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
+        // Allowed file types: images, documents, spreadsheets, csv, txt, zip/rar
         $validator = Validator::make($request->all(), [
-            'file' => 'required|file|max:10240',
+            'file' => 'required|file|max:10240|mimes:jpg,jpeg,png,gif,pdf,doc,docx,xls,xlsx,csv,txt,zip,rar',
         ]);
 
         if ($validator->fails()) {

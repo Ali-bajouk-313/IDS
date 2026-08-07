@@ -63,12 +63,24 @@ function ITSupportTickets() {
     }
   };
 
-  const handleReject = async (ticketId) => {
+  const handleReturnToAdmin = async (ticketId) => {
+    const reason = window.prompt("Provide a reason for returning this ticket to Admin:");
+
+    if (reason === null) {
+      return;
+    }
+
+    if (!reason.trim()) {
+      setError("A reason is required to return a ticket to Admin.");
+      return;
+    }
+
     try {
-      await ticketService.unassignTicket(ticketId);
+      await ticketService.returnTicketToAdmin(ticketId, reason.trim());
       setTickets((current) => current.filter((item) => item.id !== ticketId));
     } catch (err) {
-      setError(err?.response?.data?.message || "Unable to reject ticket.");
+      const validationError = err?.response?.data?.errors?.reason?.[0];
+      setError(validationError || err?.response?.data?.message || "Unable to return ticket to Admin.");
     }
   };
 
@@ -129,8 +141,8 @@ function ITSupportTickets() {
           </button>
         ) : null}
         {ticket.status !== "Closed" ? (
-          <button type="button" onClick={() => handleReject(ticket.id)} className="rounded-2xl bg-rose-100 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-200">
-            Reject
+          <button type="button" onClick={() => handleReturnToAdmin(ticket.id)} className="rounded-2xl bg-rose-100 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-200">
+            Return to Admin
           </button>
         ) : null}
       </div>

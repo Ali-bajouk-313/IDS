@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Ticket;
 use App\Models\TicketAssignment;
+use App\Models\TicketAttachment;
 use App\Models\User;
 use App\Services\ActivityLogService;
 use App\Services\NotificationService;
@@ -11,6 +12,7 @@ use App\Services\TicketHistoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class TicketController extends Controller
@@ -66,11 +68,13 @@ class TicketController extends Controller
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
+        // Validate input and optional file. Allowed file types: images, documents, spreadsheets, csv, txt, zip/rar
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:150',
             'description' => 'required|string',
             'categoryId' => ['required', 'integer', Rule::exists('categories', 'id')],
             'priority' => ['required', Rule::in(['Low', 'Medium', 'High', 'Critical'])],
+            'file' => 'nullable|file|max:10240|mimes:jpg,jpeg,png,gif,pdf,doc,docx,xls,xlsx,csv,txt,zip,rar',
         ]);
 
         if ($validator->fails()) {
@@ -93,6 +97,25 @@ class TicketController extends Controller
 
         $this->ticketHistoryService->recordCreated($ticket, $user);
         $this->activityLogService->logTicketCreated($user, $ticket, $request->ip());
+
+        // Handle optional attachment upload when creating a ticket
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $storedName = uniqid('attachment_', true) . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('ticket-attachments', $storedName, 'local');
+
+            $attachment = TicketAttachment::create([
+                'ticket_id' => $ticket->id,
+                'user_id' => $user->id,
+                'file_name' => $file->getClientOriginalName(),
+                'stored_name' => $storedName,
+                'mime_type' => $file->getClientMimeType(),
+                'size_bytes' => $file->getSize(),
+            ]);
+
+            $this->ticketHistoryService->recordAttachmentAdded($ticket, $user);
+            $this->activityLogService->logAttachmentAdded($user, $ticket, $request->ip());
+        }
 
         $ticket->load(['category', 'creator', 'assignedUser']);
 
@@ -383,6 +406,11 @@ class TicketController extends Controller
 
     public function unassignTicket(Request $request, $ticket)
     {
+        return $this->returnToAdmin($request, $ticket);
+    }
+
+    public function returnToAdmin(Request $request, $ticket)
+    {
         $user = auth('api')->user();
 
         $ticketRecord = Ticket::find($ticket);
@@ -401,15 +429,42 @@ class TicketController extends Controller
             return response()->json(['message' => 'Ticket is already unassigned'], 422);
         }
 
+        $validator = Validator::make($request->all(), [
+            'reason' => 'required|string|min:5|max:1000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
         $oldAssignedTo = $ticketRecord->assignedTo;
         $oldStatus = $ticketRecord->status;
+        $reason = trim((string) $request->reason);
         $ticketRecord->assignedTo = null;
         $ticketRecord->status = 'Open';
         $ticketRecord->save();
 
-        $this->createAssignmentHistory($ticketRecord, $oldAssignedTo, null, $user->id, 'UNASSIGNED');
-        $this->ticketHistoryService->recordUnassigned($ticketRecord, $user, $oldStatus);
-        $this->activityLogService->logTicketUnassigned($user, $ticketRecord, $request->ip());
+        $this->createAssignmentHistory($ticketRecord, $oldAssignedTo, null, $user->id, 'RETURNED_TO_ADMIN');
+        $this->ticketHistoryService->recordReturnedToAdmin($ticketRecord, $user, $oldStatus, $reason);
+        $this->activityLogService->logTicketReturnedToAdmin($user, $ticketRecord, $reason, $request->ip());
+
+        $adminUsers = User::whereHas('role', function ($query) {
+            $query->where('roleName', 'Admin');
+        })->get();
+
+        $this->notificationService->createForUsers(
+            $this->uniqueUsers($adminUsers->all()),
+            'ticket_returned_to_admin',
+            'Ticket returned to Admin queue',
+            "Ticket #{$ticketRecord->id} was returned by {$user->fullName}. Reason: {$reason}",
+            [
+                'ticket_id' => $ticketRecord->id,
+                'returned_by' => $user->id,
+                'returned_by_name' => $user->fullName,
+                'reason' => $reason,
+                'status' => $ticketRecord->status,
+            ]
+        );
 
         if ($oldStatus !== $ticketRecord->status) {
             if ($oldStatus === 'Closed' && $ticketRecord->status === 'Open') {
@@ -421,7 +476,7 @@ class TicketController extends Controller
 
         $ticketRecord->load(['category', 'creator', 'assignedUser']);
 
-        return response()->json(['message' => 'Ticket unassigned successfully', 'ticket' => $ticketRecord]);
+        return response()->json(['message' => 'Ticket returned to Admin successfully', 'ticket' => $ticketRecord]);
     }
 
     public function myAssigned(Request $request)

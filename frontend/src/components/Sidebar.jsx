@@ -23,6 +23,7 @@ function Sidebar({ role, menus }) {
             <NavLink
               key={item.name}
               to={item.path}
+              end
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${isActive ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" : "text-slate-300 hover:bg-slate-800 hover:text-white"}`
               }
@@ -36,7 +37,6 @@ function Sidebar({ role, menus }) {
 
       <div className="mt-auto space-y-4 rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
         <p className="text-sm font-semibold text-white">Service uptime</p>
-        <p className="mt-1 text-xs text-slate-400">All systems operational</p>
         <div className="mt-3 h-2 rounded-full bg-slate-800">
           <div className="h-2 w-4/5 rounded-full bg-emerald-500" />
         </div>
