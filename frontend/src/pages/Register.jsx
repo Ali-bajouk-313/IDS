@@ -4,6 +4,8 @@ import { FiEye, FiEyeOff, FiShield } from "react-icons/fi";
 import authService from "../services/authService";
 import backgroundImage from "../assets/it-ops-bg.svg";
 
+const LEBANESE_PHONE_REGEX = /^(?:\+961|00961|0)?(?:3|70|71|76|78|79|81)\d{6}$/;
+
 function Register() {
   const [formData, setFormData] = useState({
     fullName: "",
@@ -48,6 +50,12 @@ function Register() {
       return false;
     }
 
+    const normalizedPhone = formData.phone.replace(/[\s-]+/g, "");
+    if (!LEBANESE_PHONE_REGEX.test(normalizedPhone)) {
+      setError("Phone number must be a valid Lebanese number.");
+      return false;
+    }
+
     return true;
   };
 
@@ -64,10 +72,10 @@ function Register() {
 
     try {
       await authService.register({
-        fullName: formData.fullName,
-        email: formData.email,
+        fullName: formData.fullName.trim(),
+        email: formData.email.trim().toLowerCase(),
         password: formData.password,
-        phone: formData.phone,
+        phone: formData.phone.replace(/[\s-]+/g, ""),
       });
 
       setSuccess("Registration successful. A verification email has been sent to your inbox.");
@@ -79,7 +87,9 @@ function Register() {
     } catch (err) {
       const serverError =
         err?.response?.data?.message ||
+        err?.response?.data?.errors?.fullName?.[0] ||
         err?.response?.data?.errors?.email?.[0] ||
+        err?.response?.data?.errors?.phone?.[0] ||
         "Registration failed. Please try again.";
       setError(serverError);
     } finally {

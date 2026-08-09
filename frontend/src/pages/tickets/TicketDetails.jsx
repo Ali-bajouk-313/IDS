@@ -414,7 +414,7 @@ function TicketDetails() {
             </div>
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Assigned to</p>
-              <p className="mt-2 text-sm text-slate-700">{ticket.assignedUser?.fullName || "Unassigned"}</p>
+              <p className="mt-2 text-sm text-slate-700">{ticket.assignedSupportName || ticket.assignedUser?.fullName || "Unassigned"}</p>
             </div>
           </div>
         </div>

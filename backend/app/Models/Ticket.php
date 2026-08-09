@@ -22,6 +22,7 @@ class Ticket extends Model
         'categoryId',
         'createdBy',
         'assignedTo',
+        'assignedSupportName',
         'priority',
         'status',
         'closedAt',

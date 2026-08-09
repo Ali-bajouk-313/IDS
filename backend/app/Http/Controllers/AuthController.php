@@ -14,6 +14,8 @@ use App\Services\ActivityLogService;
 
 class AuthController extends Controller
 {
+    private const LEBANESE_PHONE_REGEX = '/^(?:\+961|00961|0)?(?:3|70|71|76|78|79|81)\d{6}$/';
+
     public function __construct(protected ActivityLogService $activityLogService)
     {
     }
@@ -96,18 +98,31 @@ class AuthController extends Controller
 
     public function register(Request $request)
     {
+        $normalizedFullName = trim((string) $request->input('fullName'));
+        $normalizedEmail = strtolower(trim((string) $request->input('email')));
+        $normalizedPhone = preg_replace('/[\s-]+/', '', (string) $request->input('phone'));
+
+        $request->merge([
+            'fullName' => $normalizedFullName,
+            'email' => $normalizedEmail,
+            'phone' => $normalizedPhone,
+        ]);
 
         // Validate registration data
         $request->validate([
 
-            'fullName' => 'required|string|max:100',
+            'fullName' => 'required|string|max:100|unique:users,fullName',
 
             'email' => 'required|email|unique:users,email',
 
             'password' => 'required|min:8',
 
-            'phone' => 'nullable|string|max:20'
+            'phone' => ['required', 'unique:users,phone', 'regex:' . self::LEBANESE_PHONE_REGEX]
 
+        ], [
+            'fullName.unique' => 'This username is already taken.',
+            'phone.unique' => 'This phone number is already registered.',
+            'phone.regex' => 'Phone number must be a valid Lebanese number.',
         ]);
 
 

@@ -56,6 +56,7 @@ class TicketController extends Controller
         }
 
         $tickets = $query->orderBy('createdAt', 'desc')->get();
+        $this->hydrateAssignedSupportNames($tickets);
 
         return response()->json(['tickets' => $tickets]);
     }
@@ -149,6 +150,8 @@ class TicketController extends Controller
             ->select('tickethistory.id', 'tickethistory.oldStatus', 'tickethistory.newStatus', 'tickethistory.comment', 'tickethistory.changedAt', 'users.id as userId', 'users.fullName as userName')
             ->orderBy('tickethistory.changedAt', 'desc')
             ->get();
+
+        $this->hydrateAssignedSupportName($ticket);
 
         return response()->json([
             'ticket' => $ticket,
@@ -378,6 +381,7 @@ class TicketController extends Controller
         $oldAssignedTo = $ticketRecord->assignedTo;
         $oldStatus = $ticketRecord->status;
         $ticketRecord->assignedTo = $assignedUser->id;
+        $ticketRecord->assignedSupportName = $assignedUser->fullName;
         $ticketRecord->status = 'Assigned';
         $ticketRecord->save();
 
@@ -441,6 +445,7 @@ class TicketController extends Controller
         $oldStatus = $ticketRecord->status;
         $reason = trim((string) $request->reason);
         $ticketRecord->assignedTo = null;
+        $ticketRecord->assignedSupportName = null;
         $ticketRecord->status = 'Open';
         $ticketRecord->save();
 
@@ -503,6 +508,7 @@ class TicketController extends Controller
         }
 
         $tickets = $query->orderBy('createdAt', 'desc')->get();
+        $this->hydrateAssignedSupportNames($tickets);
 
         return response()->json(['tickets' => $tickets]);
     }
@@ -594,6 +600,16 @@ class TicketController extends Controller
                 continue;
             }
             $ticket->{$field} = $value;
+        }
+
+        if (array_key_exists('assignedTo', $input)) {
+            if ($ticket->assignedTo === null) {
+                $ticket->assignedSupportName = null;
+                return;
+            }
+
+            $assignedUser = User::find($ticket->assignedTo);
+            $ticket->assignedSupportName = $assignedUser?->fullName;
         }
     }
 
@@ -690,5 +706,23 @@ class TicketController extends Controller
         }
 
         return $result;
+    }
+
+    protected function hydrateAssignedSupportNames($tickets): void
+    {
+        foreach ($tickets as $ticket) {
+            $this->hydrateAssignedSupportName($ticket);
+        }
+    }
+
+    protected function hydrateAssignedSupportName(Ticket $ticket): void
+    {
+        if (!empty($ticket->assignedSupportName)) {
+            return;
+        }
+
+        if ($ticket->assignedUser && !empty($ticket->assignedUser->fullName)) {
+            $ticket->assignedSupportName = $ticket->assignedUser->fullName;
+        }
     }
 }

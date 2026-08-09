@@ -120,7 +120,7 @@ function AdminTickets() {
       return tickets;
     }
 
-    return tickets.filter((ticket) => [ticket.ticketNumber, ticket.title, ticket.category?.categoryName, ticket.assignedUser?.fullName].some((value) => String(value || "").toLowerCase().includes(query)));
+    return tickets.filter((ticket) => [ticket.ticketNumber, ticket.title, ticket.category?.categoryName, ticket.assignedSupportName, ticket.assignedUser?.fullName].some((value) => String(value || "").toLowerCase().includes(query)));
   }, [search, tickets]);
 
   useEffect(() => {
@@ -134,13 +134,23 @@ function AdminTickets() {
   }, [filteredTickets, currentPage, pageSize]);
 
   const rows = paginatedTickets.map((ticket) => ({
-    ticketNumber: ticket.ticketNumber || `TICKET-${ticket.id}`,
-    title: ticket.title,
+    ticketNumber: <span className="font-semibold text-slate-700">{ticket.ticketNumber || `TICKET-${ticket.id}`}</span>,
+    title: (
+      <div>
+        <p className="font-semibold text-slate-900">{ticket.title}</p>
+        <p className="text-xs text-slate-500">#{ticket.id}</p>
+      </div>
+    ),
     category: ticket.category?.categoryName || "-",
     priority: <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-slate-700">{ticket.priority}</span>,
     status: (
       <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] ${statusStyles[ticket.status] ?? statusStyles.Open}`}>
         {ticket.status}
+      </span>
+    ),
+    assignedAgentName: (
+      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${ticket.assignedTo ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-600"}`}>
+        {ticket.assignedSupportName || ticket.assignedUser?.fullName || "Unassigned"}
       </span>
     ),
     createdDate: new Date(ticket.createdAt).toLocaleDateString(),
@@ -170,11 +180,6 @@ function AdminTickets() {
               {assigningTicketId === ticket.id ? "Working..." : "Assign"}
             </button>
           </div>
-        ) : null}
-        {ticket.assignedTo ? (
-          <span className="rounded-2xl bg-violet-100 px-3 py-2 text-xs font-semibold text-violet-700">
-            {ticket.assignedUser?.fullName || "IT Support"}
-          </span>
         ) : null}
         <button type="button" onClick={() => handleDelete(ticket.id)} className="rounded-2xl bg-rose-100 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-200">
           Delete
@@ -242,6 +247,7 @@ function AdminTickets() {
                 { label: "Category", key: "category" },
                 { label: "Priority", key: "priority" },
                 { label: "Status", key: "status" },
+                { label: "Assigned IT Agent", key: "assignedAgentName" },
                 { label: "Created", key: "createdDate" },
                 { label: "Actions", key: "actions" },
               ]} rows={rows} emptyState="No tickets match your current filters." />
