@@ -144,6 +144,30 @@ const ticketService = {
   getActivityLogs() {
     return api.get('/activity-logs');
   },
+
+  getTicketAiSummary(id) {
+    return api.get(`/tickets/${id}/ai/summary`);
+  },
+
+  getTicketAiPriorityRecommendation(id) {
+    return api.get(`/tickets/${id}/ai/priority`);
+  },
+
+  getTicketAiTroubleshooting(id) {
+    return api.get(`/tickets/${id}/ai/troubleshooting`);
+  },
+
+  getReports() {
+    return api.get('/reports');
+  },
+
+  exportReportsPdf() {
+    return api.get('/reports/export/pdf', { responseType: 'blob' });
+  },
+
+  exportReportsExcel() {
+    return api.get('/reports/export/excel', { responseType: 'blob' });
+  },
 };
 
 export { notificationService };

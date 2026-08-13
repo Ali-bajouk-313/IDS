@@ -82,8 +82,9 @@ api.interceptors.response.use(
     (response) => {
         const method = response?.config?.method?.toLowerCase();
         const isMutation = ["post", "put", "patch", "delete"].includes(method);
+        const skipSuccessToast = response?.config?.skipSuccessToast === true;
 
-        if (isMutation) {
+        if (isMutation && !skipSuccessToast) {
             clearGetCache();
             const message = response?.data?.message || "Action completed successfully.";
             showToast({ type: "success", message });

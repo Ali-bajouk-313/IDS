@@ -50,6 +50,10 @@ function TicketDetails() {
   const [attachmentSuccess, setAttachmentSuccess] = useState("");
   const [attachmentDeletingId, setAttachmentDeletingId] = useState(null);
   const [selectedAttachmentFile, setSelectedAttachmentFile] = useState(null);
+  const [aiActionLoading, setAiActionLoading] = useState("");
+  const [aiError, setAiError] = useState("");
+  const [aiInsight, setAiInsight] = useState(null);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -58,14 +62,11 @@ function TicketDetails() {
     ...storedUser,
     id: storedUser.id ?? storedUser.userId,
     role: storedUser.role ?? storedUser.roleName ?? "Employee",
-    departmentId: storedUser.departmentId ?? storedUser.department?.id ?? null,
   };
   const role = user.role || "Employee";
   const currentUserId = Number(user.id ?? 0) || null;
-  const currentUserDepartmentId = Number(user.departmentId ?? 0) || null;
   const creatorId = Number(ticket?.creator?.id ?? ticket?.createdBy ?? 0) || null;
   const assignedToId = Number(ticket?.assignedTo ?? ticket?.assignedUser?.id ?? 0) || null;
-  const creatorDepartmentId = Number(ticket?.creator?.departmentId ?? 0) || null;
 
   const canEditByEmployee = role === "Employee" && creatorId === currentUserId && ticket?.assignedTo === null;
   const canSupportUpdate = role === "IT Support" && assignedToId === currentUserId && ticket?.status !== "In Progress";
@@ -80,11 +81,51 @@ function TicketDetails() {
   const canAddComment = canEmployeeComment || canSupportComment || canAdminComment;
   const canViewInternalNotes = role === "Admin" || (role === "IT Support" && assignedToId === currentUserId);
   const canDeleteInternalNotes = role === "Admin";
-  const canViewAttachments = role === "Admin" || (role === "IT Support" && assignedToId === currentUserId) || (role === "Employee" && creatorId === currentUserId) || (role === "Manager" && creatorDepartmentId === currentUserDepartmentId);
+  const canViewAttachments = role === "Admin" || (role === "IT Support" && assignedToId === currentUserId) || (role === "Employee" && creatorId === currentUserId) || (role === "Manager" && creatorId === currentUserId);
   const canUploadAttachments = role === "Admin" || (role === "IT Support" && assignedToId === currentUserId) || (role === "Employee" && creatorId === currentUserId);
   const canDeleteAttachments = role === "Admin";
+  const canRequestTroubleshooting = role === "IT Support" && assignedToId === currentUserId;
 
   const showEditPanel = useMemo(() => canEdit && ticket, [canEdit, ticket]);
+
+  const closeAiModal = () => {
+    setAiModalOpen(false);
+    setAiInsight(null);
+  };
+
+  const handleAiInsight = async (action) => {
+    setAiError("");
+    setAiActionLoading(action);
+
+    const actionMap = {
+      summary: ticketService.getTicketAiSummary,
+      priority: ticketService.getTicketAiPriorityRecommendation,
+      troubleshooting: ticketService.getTicketAiTroubleshooting,
+    };
+
+    try {
+      const response = await actionMap[action](id);
+      setAiInsight({ kind: action, ...(response.data?.data || {}) });
+      setAiModalOpen(true);
+    } catch (err) {
+      setAiError(err?.response?.data?.message || "Unable to generate AI insight.");
+    } finally {
+      setAiActionLoading("");
+    }
+  };
+
+  const handleApplyPriorityRecommendation = () => {
+    if (!aiInsight?.recommendedPriority) {
+      return;
+    }
+
+    setForm((current) => ({
+      ...current,
+      priority: aiInsight.recommendedPriority,
+    }));
+    setSuccess(`Applied AI priority recommendation: ${aiInsight.recommendedPriority}. Save changes to persist it.`);
+    closeAiModal();
+  };
 
   const loadTicketDetails = useCallback(async () => {
     const [ticketResponse, commentsResponse, historyResponse] = await Promise.all([
@@ -108,8 +149,6 @@ function TicketDetails() {
 
     const creatorIdForTicket = Number(ticketRecord?.creator?.id ?? ticketRecord?.createdBy ?? 0) || null;
     const assignedToIdForTicket = Number(ticketRecord?.assignedTo ?? ticketRecord?.assignedUser?.id ?? 0) || null;
-    const creatorDepartmentIdForTicket = Number(ticketRecord?.creator?.departmentId ?? 0) || null;
-
     if (role === "Admin" || (role === "IT Support" && assignedToIdForTicket === currentUserId)) {
       const notesResponse = await ticketService.getInternalNotes(id);
       setInternalNotes(readCollection(notesResponse, "notes"));
@@ -117,13 +156,13 @@ function TicketDetails() {
       setInternalNotes([]);
     }
 
-    if (role === "Admin" || (role === "IT Support" && assignedToIdForTicket === currentUserId) || (role === "Employee" && creatorIdForTicket === currentUserId) || (role === "Manager" && creatorDepartmentIdForTicket === currentUserDepartmentId)) {
+    if (role === "Admin" || (role === "IT Support" && assignedToIdForTicket === currentUserId) || (role === "Employee" && creatorIdForTicket === currentUserId) || (role === "Manager" && creatorIdForTicket === currentUserId)) {
       const attachmentsResponse = await ticketService.getAttachments(id);
       setAttachments(readCollection(attachmentsResponse, "attachments"));
     } else {
       setAttachments([]);
     }
-  }, [id, role, currentUserId, currentUserDepartmentId]);
+  }, [id, role, currentUserId]);
 
   const handleFieldChange = (field) => (event) => {
     setForm((current) => ({
@@ -417,6 +456,47 @@ function TicketDetails() {
               <p className="mt-2 text-sm text-slate-700">{ticket.assignedSupportName || ticket.assignedUser?.fullName || "Unassigned"}</p>
             </div>
           </div>
+        </div>
+
+        <div className="rounded-[1.5rem] border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-sky-50 p-6 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-indigo-700">AI Assistance</p>
+              <h3 className="mt-2 text-lg font-semibold text-slate-900">Generate guidance from the live ticket record</h3>
+              <p className="mt-1 max-w-3xl text-sm text-slate-500">
+                Summary and priority recommendations are available to the current viewer. Troubleshooting suggestions are shown for the assigned IT Support technician.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => handleAiInsight("summary")}
+                disabled={aiActionLoading !== ""}
+                className="rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+              >
+                {aiActionLoading === "summary" ? "Generating summary…" : "AI Summary"}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAiInsight("priority")}
+                disabled={aiActionLoading !== ""}
+                className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+              >
+                {aiActionLoading === "priority" ? "Analyzing priority…" : "AI Priority Recommendation"}
+              </button>
+              {canRequestTroubleshooting ? (
+                <button
+                  type="button"
+                  onClick={() => handleAiInsight("troubleshooting")}
+                  disabled={aiActionLoading !== ""}
+                  className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                >
+                  {aiActionLoading === "troubleshooting" ? "Preparing steps…" : "AI Troubleshooting"}
+                </button>
+              ) : null}
+            </div>
+          </div>
+          {aiError ? <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{aiError}</p> : null}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.8fr_1fr]">
@@ -862,6 +942,123 @@ function TicketDetails() {
                 </div>
               </div>
             ) : null}
+          </div>
+        ) : null}
+
+        {aiModalOpen && aiInsight ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+            <div className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.28)]">
+              <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.22em] text-indigo-700">AI Result</p>
+                  <h3 className="mt-2 text-2xl font-semibold text-slate-900">
+                    {aiInsight.kind === "summary"
+                      ? "Ticket Summary"
+                      : aiInsight.kind === "priority"
+                        ? "Priority Recommendation"
+                        : "Troubleshooting Suggestions"}
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Ticket {aiInsight.ticketNumber} • {aiInsight.provider || "AI"}{aiInsight.model ? ` • ${aiInsight.model}` : ""}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeAiModal}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="max-h-[calc(90vh-120px)] overflow-y-auto px-6 py-6">
+                <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                  <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5">
+                    {aiInsight.kind === "summary" ? (
+                      <>
+                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Summary</p>
+                        <p className="mt-3 text-sm leading-7 text-slate-700 whitespace-pre-line">{aiInsight.summary}</p>
+                        {Array.isArray(aiInsight.highlights) && aiInsight.highlights.length > 0 ? (
+                          <div className="mt-5">
+                            <p className="text-sm font-semibold text-slate-900">Highlights</p>
+                            <ul className="mt-3 space-y-2">
+                              {aiInsight.highlights.map((highlight, index) => (
+                                <li key={`${highlight}-${index}`} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                                  {highlight}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+                      </>
+                    ) : null}
+
+                    {aiInsight.kind === "priority" ? (
+                      <>
+                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Recommendation</p>
+                        <div className="mt-3 inline-flex rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
+                          {aiInsight.recommendedPriority || "Medium"}
+                        </div>
+                        <p className="mt-4 text-sm leading-7 text-slate-700 whitespace-pre-line">{aiInsight.explanation}</p>
+                      </>
+                    ) : null}
+
+                    {aiInsight.kind === "troubleshooting" ? (
+                      <>
+                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Practical guidance</p>
+                        {aiInsight.summary ? <p className="mt-3 text-sm leading-7 text-slate-700 whitespace-pre-line">{aiInsight.summary}</p> : null}
+                        {Array.isArray(aiInsight.suggestions) && aiInsight.suggestions.length > 0 ? (
+                          <ol className="mt-5 space-y-3">
+                            {aiInsight.suggestions.map((suggestion, index) => (
+                              <li key={`${suggestion}-${index}`} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                                <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700">
+                                  {index + 1}
+                                </span>
+                                {suggestion}
+                              </li>
+                            ))}
+                          </ol>
+                        ) : null}
+                      </>
+                    ) : null}
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5">
+                      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Live ticket context</p>
+                      <dl className="mt-4 space-y-3 text-sm text-slate-700">
+                        <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-3">
+                          <dt className="text-slate-500">Title</dt>
+                          <dd className="text-right font-medium text-slate-900">{ticket.title}</dd>
+                        </div>
+                        <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-3">
+                          <dt className="text-slate-500">Category</dt>
+                          <dd className="text-right font-medium text-slate-900">{ticket.category?.categoryName || "-"}</dd>
+                        </div>
+                        <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-3">
+                          <dt className="text-slate-500">Priority</dt>
+                          <dd className="text-right font-medium text-slate-900">{ticket.priority}</dd>
+                        </div>
+                        <div className="flex items-start justify-between gap-4">
+                          <dt className="text-slate-500">Status</dt>
+                          <dd className="text-right font-medium text-slate-900">{ticket.status}</dd>
+                        </div>
+                      </dl>
+                    </div>
+
+                    {aiInsight.kind === "priority" && canEdit ? (
+                      <button
+                        type="button"
+                        onClick={handleApplyPriorityRecommendation}
+                        className="w-full rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                      >
+                        Apply Recommendation
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         ) : null}
       </div>

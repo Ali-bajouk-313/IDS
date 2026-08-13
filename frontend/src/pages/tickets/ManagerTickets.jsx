@@ -54,7 +54,7 @@ function ManagerTickets() {
       return tickets;
     }
 
-    return tickets.filter((ticket) => [ticket.ticketNumber, ticket.creator?.fullName, ticket.creator?.department?.departmentName].some((value) => String(value || "").toLowerCase().includes(query)));
+    return tickets.filter((ticket) => [ticket.ticketNumber, ticket.creator?.fullName].some((value) => String(value || "").toLowerCase().includes(query)));
   }, [search, tickets]);
 
   useEffect(() => {
@@ -70,7 +70,6 @@ function ManagerTickets() {
   const rows = paginatedTickets.map((ticket) => ({
     ticketNumber: ticket.ticketNumber,
     employee: ticket.creator?.fullName || "-",
-    department: ticket.creator?.department?.departmentName || "-",
     priority: (
       <span className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] bg-slate-100 text-slate-700">
         {ticket.priority}
@@ -92,15 +91,15 @@ function ManagerTickets() {
   }));
 
   return (
-    <DashboardLayout role="Manager" title="Department Tickets" subtitle="Review tickets for your department.">
+    <DashboardLayout role="Manager" title="My Tickets" subtitle="Review tickets you created.">
       <div className="space-y-6">
         <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
           <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <h3 className="text-lg font-semibold tracking-tight text-slate-900">Department tickets</h3>
-              <p className="mt-1 text-sm text-slate-500">Review the latest requests flowing through your team.</p>
+              <h3 className="text-lg font-semibold tracking-tight text-slate-900">My tickets</h3>
+              <p className="mt-1 text-sm text-slate-500">Review the latest requests in your scope.</p>
             </div>
-            <div className="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700">{filteredTickets.length} department tickets</div>
+            <div className="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700">{filteredTickets.length} tickets</div>
           </div>
 
           <div className="mb-5 grid gap-4 lg:grid-cols-[1.4fr_0.9fr_0.9fr_0.8fr]">
@@ -134,13 +133,12 @@ function ManagerTickets() {
           {loading ? (
             <LoadingSkeleton variant="table" rows={6} />
           ) : filteredTickets.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-600">No tickets found in your department.</div>
+            <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-600">No tickets found in your scope.</div>
           ) : (
             <>
               <DataTable columns={[
                 { label: "Ticket #", key: "ticketNumber" },
                 { label: "Employee", key: "employee" },
-                { label: "Department", key: "department" },
                 { label: "Priority", key: "priority" },
                 { label: "Status", key: "status" },
                 { label: "Actions", key: "actions" },

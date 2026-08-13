@@ -1,36 +1,31 @@
 import { useMemo } from "react";
-import { useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
-import { FiActivity, FiBarChart2, FiBell, FiBriefcase, FiClipboard, FiGrid, FiHome, FiLayers, FiLifeBuoy, FiMessageSquare, FiSettings, FiShield, FiUserCheck, FiUsers } from "react-icons/fi";
+import { FiActivity, FiBarChart2, FiBell, FiClipboard, FiHome, FiLayers, FiMessageCircle, FiMessageSquare, FiUserCheck, FiUsers } from "react-icons/fi";
 
 function DashboardLayout({ children, role, title, subtitle }) {
-  const location = useLocation();
-
   const menus = useMemo(() => {
     if (role === "Admin") {
       return [
         { name: "Dashboard", path: "/admin-dashboard", icon: FiHome },
         { name: "Users", path: "/admin-dashboard/users", icon: FiUsers },
-        { name: "Roles", path: "/admin-dashboard/roles", icon: FiShield },
-        { name: "Departments", path: "/admin-dashboard/departments", icon: FiGrid },
         { name: "All Tickets", path: "/admin-dashboard/tickets", icon: FiMessageSquare },
         { name: "Activity Logs", path: "/admin-dashboard/activity-logs", icon: FiActivity },
-        { name: "Categories", path: "/admin-dashboard/categories", icon: FiLayers },
-        { name: "SLA Rules", path: "/admin-dashboard/sla", icon: FiClipboard },
         { name: "Reports", path: "/admin-dashboard/reports", icon: FiBarChart2 },
-        { name: "Settings", path: "/admin-dashboard/settings", icon: FiSettings },
+        { name: "Notifications", path: "/admin-dashboard/notifications", icon: FiBell },
+        { name: "AI Chatbot", path: "/ai-chat", icon: FiMessageCircle },
+        { name: "Profile", path: "/profile", icon: FiUserCheck },
       ];
     }
 
     if (role === "Manager") {
       return [
         { name: "Dashboard", path: "/manager-dashboard", icon: FiHome },
-        { name: "Team Overview", path: "/manager-dashboard/team", icon: FiUsers },
-        { name: "Department Tickets", path: "/manager-dashboard/tickets", icon: FiMessageSquare },
+        { name: "My Tickets", path: "/manager-dashboard/tickets", icon: FiMessageSquare },
         { name: "Reports", path: "/manager-dashboard/reports", icon: FiBarChart2 },
-        { name: "Performance", path: "/manager-dashboard/performance", icon: FiBriefcase },
+        { name: "AI Chatbot", path: "/ai-chat", icon: FiMessageCircle },
         { name: "Notifications", path: "/manager-dashboard/notifications", icon: FiBell },
+        { name: "Profile", path: "/profile", icon: FiUserCheck },
       ];
     }
 
@@ -41,6 +36,9 @@ function DashboardLayout({ children, role, title, subtitle }) {
         { name: "Activity Logs", path: "/it-dashboard/activity-logs", icon: FiActivity },
         { name: "Knowledge Base", path: "/it-dashboard/knowledge", icon: FiLayers },
         { name: "Reports", path: "/it-dashboard/reports", icon: FiBarChart2 },
+        { name: "Notifications", path: "/it-dashboard/notifications", icon: FiBell },
+        { name: "AI Chatbot", path: "/ai-chat", icon: FiMessageCircle },
+        { name: "Profile", path: "/profile", icon: FiUserCheck },
       ];
     }
 
@@ -48,8 +46,10 @@ function DashboardLayout({ children, role, title, subtitle }) {
       { name: "Dashboard", path: "/employee-dashboard", icon: FiHome },
       { name: "My Tickets", path: "/employee-dashboard/tickets", icon: FiMessageSquare },
       { name: "Create Ticket", path: "/employee-dashboard/tickets/create", icon: FiClipboard },
+      { name: "Reports", path: "/employee-dashboard/reports", icon: FiBarChart2 },
+      { name: "AI Chatbot", path: "/ai-chat", icon: FiMessageCircle },
       { name: "Notifications", path: "/employee-dashboard/notifications", icon: FiBell },
-      { name: "Profile", path: "/employee-dashboard/profile", icon: FiUserCheck },
+      { name: "Profile", path: "/profile", icon: FiUserCheck },
     ];
   }, [role]);
 

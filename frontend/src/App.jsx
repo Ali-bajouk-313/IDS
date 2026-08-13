@@ -17,7 +17,12 @@ import ITSupportTickets from "./pages/tickets/ITSupportTickets";
 import ManagerTickets from "./pages/tickets/ManagerTickets";
 import TicketDetails from "./pages/tickets/TicketDetails";
 import ActivityLogs from "./pages/admin/ActivityLogs";
+import UsersPage from "./pages/admin/UsersPage";
 import NotificationsPage from "./pages/notifications/NotificationsPage";
+import ReportsPage from "./pages/reports/ReportsPage";
+import KnowledgeBaseAssistant from "./pages/it-support/KnowledgeBaseAssistant";
+import ChatbotAssistant from "./pages/ai/ChatbotAssistant";
+import ProfilePage from "./pages/profile/ProfilePage";
 import ToastContainer from "./components/ToastContainer";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -30,7 +35,6 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
 
@@ -51,10 +55,34 @@ function App() {
           }
         />
         <Route
+          path="/admin-dashboard/users"
+          element={
+            <ProtectedRoute allowedRoles={["Admin"]}>
+              <UsersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/admin-dashboard/activity-logs"
           element={
             <ProtectedRoute allowedRoles={["Admin"]}>
               <ActivityLogs />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin-dashboard/notifications"
+          element={
+            <ProtectedRoute allowedRoles={["Admin"]}>
+              <NotificationsPage role="Admin" title="Admin Notifications" subtitle="Track system-wide ticket and workflow updates." />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin-dashboard/reports"
+          element={
+            <ProtectedRoute allowedRoles={["Admin"]}>
+              <ReportsPage role="Admin" title="Reports" subtitle="Live system reports and ticket analytics." />
             </ProtectedRoute>
           }
         />
@@ -79,7 +107,15 @@ function App() {
           path="/manager-dashboard/notifications"
           element={
             <ProtectedRoute allowedRoles={["Manager"]}>
-              <NotificationsPage role="Manager" title="Manager Notifications" subtitle="Review department activity and ticket updates." />
+              <NotificationsPage role="Manager" title="Manager Notifications" subtitle="Review your ticket activity and updates." />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager-dashboard/reports"
+          element={
+            <ProtectedRoute allowedRoles={["Manager"]}>
+              <ReportsPage role="Manager" title="Reports" subtitle="Your ticket analytics." />
             </ProtectedRoute>
           }
         />
@@ -105,6 +141,47 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["IT Support"]}>
               <ActivityLogs role="IT Support" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/it-dashboard/reports"
+          element={
+            <ProtectedRoute allowedRoles={["IT Support"]}>
+              <ReportsPage role="IT Support" title="Reports" subtitle="Track your assigned ticket workload and resolution trends." />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/it-dashboard/notifications"
+          element={
+            <ProtectedRoute allowedRoles={["IT Support"]}>
+              <NotificationsPage role="IT Support" title="Support Notifications" subtitle="Stay updated on ticket assignments and status changes." />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/it-dashboard/knowledge"
+          element={
+            <ProtectedRoute allowedRoles={["IT Support"]}>
+              <KnowledgeBaseAssistant />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/ai-chat"
+          element={
+            <ProtectedRoute allowedRoles={["Admin", "Manager", "IT Support", "Employee"]}>
+              <ChatbotAssistant />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute allowedRoles={["Admin", "Manager", "IT Support", "Employee"]}>
+              <ProfilePage />
             </ProtectedRoute>
           }
         />
@@ -138,6 +215,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["Employee"]}>
               <NotificationsPage role="Employee" title="My Notifications" subtitle="Stay on top of your ticket updates." />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/employee-dashboard/reports"
+          element={
+            <ProtectedRoute allowedRoles={["Employee"]}>
+              <ReportsPage role="Employee" title="Reports" subtitle="See your own ticket activity and resolution trends." />
             </ProtectedRoute>
           }
         />

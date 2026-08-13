@@ -68,11 +68,11 @@ function ManagerDashboard() {
   const categoryChartData = useMemo(() => Object.entries(category || {}).map(([name, value]) => ({ name, value })), [category]);
 
   return (
-    <DashboardLayout role="Manager" title="Department Performance" subtitle="Monitor your team, ticket load, and service health.">
+    <DashboardLayout role="Manager" title="Ticket Performance" subtitle="Monitor your ticket load and service health.">
       {error ? <div className="mb-4 rounded-3xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">{error}</div> : null}
 
       <div className="grid gap-4 lg:grid-cols-4">
-        <DashboardCard title="Department Tickets" value={summary.totalTickets || 0} detail="Current department scope" icon={FiMessageSquare} accent="bg-blue-600" />
+        <DashboardCard title="My Tickets" value={summary.totalTickets || 0} detail="Current manager scope" icon={FiMessageSquare} accent="bg-blue-600" />
         <DashboardCard title="Pending Tickets" value={(summary.openTickets || 0) + (summary.inProgressTickets || 0)} detail="Needs action" icon={FiClock} accent="bg-amber-600" />
         <DashboardCard title="Resolved" value={(summary.resolvedTickets || 0) + (summary.closedTickets || 0)} detail="Completed" icon={FiTrendingUp} accent="bg-emerald-600" />
         <DashboardCard title="Assigned Team" value={teamPerformance.assignedTickets || 0} detail="Tickets with owners" icon={FiUsers} accent="bg-sky-600" />
@@ -125,8 +125,8 @@ function ManagerDashboard() {
       <div className="mt-6 rounded-[1.5rem] border border-slate-200 bg-white/90 p-6 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">Recent Department Tickets</h3>
-            <p className="text-sm text-slate-500">The latest ticket activity in your department.</p>
+            <h3 className="text-lg font-semibold text-slate-900">Recent Tickets</h3>
+            <p className="text-sm text-slate-500">Your latest ticket activity.</p>
           </div>
         </div>
         <DataTable columns={[
@@ -136,7 +136,7 @@ function ManagerDashboard() {
           { label: "Assigned To", key: "assignedTo" },
           { label: "Priority", key: "priority" },
           { label: "Status", key: "status" },
-        ]} rows={recentTickets.map((ticket) => ({ ...ticket }))} emptyState="No department tickets found." />
+        ]} rows={recentTickets.map((ticket) => ({ ...ticket }))} emptyState="No tickets found." />
       </div>
     </DashboardLayout>
   );
