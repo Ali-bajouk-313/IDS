@@ -264,8 +264,8 @@ class TicketHistoryAuditTrailTest extends TestCase
         $roles = $this->seedRoles();
 
         $admin = $this->makeUser($roles['Admin'], 'admin-history@example.com', 'Admin History', 99);
-        $managerDept1 = $this->makeUser($roles['Manager'], 'manager1-history@example.com', 'Manager Dept One', 1);
-        $managerDept2 = $this->makeUser($roles['Manager'], 'manager2-history@example.com', 'Manager Dept Two', 2);
+        $managerOwner = $this->makeUser($roles['Manager'], 'manager1-history@example.com', 'Manager Owner', 1);
+        $managerOther = $this->makeUser($roles['Manager'], 'manager2-history@example.com', 'Manager Other', 2);
 
         $employeeOwner = $this->makeUser($roles['Employee'], 'employee-owner-history@example.com', 'Employee Owner', 1);
         $employeeOther = $this->makeUser($roles['Employee'], 'employee-other-history@example.com', 'Employee Other', 2);
@@ -274,6 +274,7 @@ class TicketHistoryAuditTrailTest extends TestCase
         $supportOther = $this->makeUser($roles['IT Support'], 'support-other-history@example.com', 'Support Other', 1);
 
         $ticket = $this->makeTicket('TICKET-20007', $employeeOwner->id, $supportAssigned->id, 'Assigned');
+        $managerOwnedTicket = $this->makeTicket('TICKET-20008', $managerOwner->id, $supportAssigned->id, 'Assigned');
 
         DB::table('tickethistory')->insert([
             'ticketId' => $ticket->id,
@@ -300,11 +301,15 @@ class TicketHistoryAuditTrailTest extends TestCase
                 ],
             ]);
 
-        $this->actingAs($managerDept1, 'api')
-            ->getJson("/api/tickets/{$ticket->id}/history")
+        $this->actingAs($managerOwner, 'api')
+            ->getJson("/api/tickets/{$managerOwnedTicket->id}/history")
             ->assertStatus(200);
 
-        $this->actingAs($managerDept2, 'api')
+        $this->actingAs($managerOwner, 'api')
+            ->getJson("/api/tickets/{$ticket->id}/history")
+            ->assertStatus(403);
+
+        $this->actingAs($managerOther, 'api')
             ->getJson("/api/tickets/{$ticket->id}/history")
             ->assertStatus(403);
 

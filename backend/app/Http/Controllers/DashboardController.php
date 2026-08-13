@@ -41,13 +41,10 @@ class DashboardController extends Controller
     public function manager(Request $request)
     {
         $user = $request->user();
-        $departmentId = $user->departmentId;
 
         $tickets = Ticket::query()
             ->with(['category', 'creator', 'assignedUser'])
-            ->whereHas('creator', function ($query) use ($departmentId) {
-                $query->where('departmentId', $departmentId);
-            })
+            ->where('createdBy', $user->id)
             ->get();
 
         return response()->json([
@@ -197,14 +194,16 @@ class DashboardController extends Controller
     private function buildUserStats($users, $tickets): array
     {
         $activeUsers = $users->where('status', 'Active')->count();
-        $ticketsPerDepartment = $users->groupBy('departmentId')->map(function ($group) {
+        $usersByRole = $users->groupBy(function ($user) {
+            return $user->role?->roleName ?? 'Unknown';
+        })->map(function ($group) {
             return $group->count();
         });
 
         return [
             'totalUsers' => $users->count(),
             'activeUsers' => $activeUsers,
-            'ticketsPerDepartment' => $ticketsPerDepartment->toArray(),
+            'usersByRole' => $usersByRole->toArray(),
         ];
     }
 

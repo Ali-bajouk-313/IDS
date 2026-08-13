@@ -20,7 +20,6 @@ class User extends Authenticatable implements JWTSubject
 
     protected $fillable = [
         'roleId',
-        'departmentId',
         'fullName',
         'email',
         'password',
@@ -42,6 +41,7 @@ class User extends Authenticatable implements JWTSubject
             'password' => 'hashed',
             'createdAt' => 'datetime',
             'updatedAt' => 'datetime',
+            'email_verified_at' => 'datetime',
         ];
     }
 

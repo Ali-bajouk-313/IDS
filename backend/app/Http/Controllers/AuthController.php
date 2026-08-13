@@ -10,11 +10,13 @@ use App\Mail\EmailVerificationMail;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use App\Services\ActivityLogService;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
-    private const LEBANESE_PHONE_REGEX = '/^(?:\+961|00961|0)?(?:3|70|71|76|78|79|81)\d{6}$/';
+    private const LEBANESE_PHONE_REGEX = '/^(?:\+?961|00961|0)?(?:3|70|71|76|78|79|81)\d{6}$/';
 
     public function __construct(protected ActivityLogService $activityLogService)
     {
@@ -133,8 +135,6 @@ class AuthController extends Controller
             // Default role = Employee
             'roleId' => 1,
 
-            'departmentId' => null,
-
             'fullName' => $request->fullName,
 
             'email' => $request->email,
@@ -251,13 +251,120 @@ public function verifyEmail(Request $request)
     {
         $user = auth('api')->user();
 
-        if ($user->role->roleName !== 'Admin') {
+        if (!$this->isAdmin($user)) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
         $users = User::with('role')->get();
 
         return response()->json(['users' => $users]);
+    }
+
+    public function showUser(Request $request, int $id)
+    {
+        $admin = auth('api')->user();
+
+        if (!$this->isAdmin($admin)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $user = User::with('role')->find($id);
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        return response()->json(['user' => $user]);
+    }
+
+    public function updateUser(Request $request, int $id)
+    {
+        $admin = auth('api')->user();
+
+        if (!$this->isAdmin($admin)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $targetUser = User::find($id);
+
+        if (!$targetUser) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $normalizedFullName = trim((string) $request->input('fullName', ''));
+        $normalizedEmail = strtolower(trim((string) $request->input('email', '')));
+        $normalizedPhone = preg_replace('/[\s-]+/', '', (string) $request->input('phone', ''));
+
+        $request->merge([
+            'fullName' => $normalizedFullName,
+            'email' => $normalizedEmail,
+            'phone' => $normalizedPhone,
+        ]);
+
+        $validated = $request->validate([
+            'fullName' => ['required', 'string', 'max:100', Rule::unique('users', 'fullName')->ignore($targetUser->id)],
+            'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($targetUser->id)],
+            'phone' => ['required', 'string', 'max:20', 'regex:' . self::LEBANESE_PHONE_REGEX, Rule::unique('users', 'phone')->ignore($targetUser->id)],
+            'roleId' => ['required', 'integer', Rule::exists('roles', 'id')],
+            'status' => ['required', 'string', Rule::in(['Active', 'Inactive'])],
+        ], [
+            'fullName.unique' => 'This username is already taken.',
+            'phone.unique' => 'This phone number is already registered.',
+            'phone.regex' => 'Phone number must be a valid Lebanese number.',
+        ]);
+
+        if ((int) $targetUser->id === (int) $admin->id && $validated['status'] !== 'Active') {
+            return response()->json([
+                'errors' => [
+                    'status' => ['You cannot deactivate your own account.'],
+                ],
+            ], 422);
+        }
+
+        $targetUser->fullName = $validated['fullName'];
+        $targetUser->email = $validated['email'];
+        $targetUser->phone = $validated['phone'];
+        $targetUser->roleId = (int) $validated['roleId'];
+        $targetUser->status = $validated['status'];
+        $targetUser->updatedAt = now();
+        $targetUser->save();
+
+        return response()->json([
+            'message' => 'User updated successfully.',
+            'user' => User::with('role')->find($targetUser->id),
+        ]);
+    }
+
+    public function deleteUser(Request $request, int $id)
+    {
+        $admin = auth('api')->user();
+
+        if (!$this->isAdmin($admin)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $targetUser = User::find($id);
+
+        if (!$targetUser) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        if ((int) $targetUser->id === (int) $admin->id) {
+            return response()->json([
+                'errors' => [
+                    'user' => ['You cannot delete your own account.'],
+                ],
+            ], 422);
+        }
+
+        DB::transaction(function () use ($targetUser, $admin): void {
+            $this->reassignAndCleanupUserRelations((int) $targetUser->id, (int) $admin->id, (string) $targetUser->email);
+            $targetUser->delete();
+        });
+
+        return response()->json([
+            'message' => 'User deleted successfully.',
+        ]);
     }
 
     public function logout(Request $request)
@@ -273,6 +380,112 @@ public function verifyEmail(Request $request)
         return response()->json([
             'message' => 'Logged out successfully'
         ]);
+    }
+
+    protected function isAdmin(?User $user): bool
+    {
+        return $user && $user->role && $user->role->roleName === 'Admin';
+    }
+
+    protected function reassignAndCleanupUserRelations(int $targetUserId, int $replacementUserId, string $targetEmail): void
+    {
+        if (Schema::hasTable('tickets')) {
+            if (Schema::hasColumn('tickets', 'createdBy')) {
+                DB::table('tickets')
+                    ->where('createdBy', $targetUserId)
+                    ->update(['createdBy' => $replacementUserId]);
+            }
+
+            if (Schema::hasColumn('tickets', 'assignedTo')) {
+                if (Schema::hasColumn('tickets', 'status')) {
+                    DB::table('tickets')
+                        ->where('assignedTo', $targetUserId)
+                        ->whereIn('status', ['Assigned', 'In Progress'])
+                        ->update(['status' => 'Open']);
+                }
+
+                $assignedUpdate = ['assignedTo' => null];
+                if (Schema::hasColumn('tickets', 'assignedSupportName')) {
+                    $assignedUpdate['assignedSupportName'] = null;
+                }
+
+                DB::table('tickets')
+                    ->where('assignedTo', $targetUserId)
+                    ->update($assignedUpdate);
+            }
+        }
+
+        if (Schema::hasTable('tickethistory') && Schema::hasColumn('tickethistory', 'changedBy')) {
+            DB::table('tickethistory')
+                ->where('changedBy', $targetUserId)
+                ->update(['changedBy' => $replacementUserId]);
+        }
+
+        if (Schema::hasTable('ticketcomments') && Schema::hasColumn('ticketcomments', 'userId')) {
+            DB::table('ticketcomments')
+                ->where('userId', $targetUserId)
+                ->update(['userId' => $replacementUserId]);
+        }
+
+        if (Schema::hasTable('ticketattachments') && Schema::hasColumn('ticketattachments', 'uploadedBy')) {
+            DB::table('ticketattachments')
+                ->where('uploadedBy', $targetUserId)
+                ->update(['uploadedBy' => $replacementUserId]);
+        }
+
+        if (Schema::hasTable('ticket_internal_notes') && Schema::hasColumn('ticket_internal_notes', 'user_id')) {
+            DB::table('ticket_internal_notes')
+                ->where('user_id', $targetUserId)
+                ->update(['user_id' => $replacementUserId]);
+        }
+
+        if (Schema::hasTable('ticket_assignments')) {
+            if (Schema::hasColumn('ticket_assignments', 'assigned_by')) {
+                DB::table('ticket_assignments')
+                    ->where('assigned_by', $targetUserId)
+                    ->update(['assigned_by' => $replacementUserId]);
+            }
+
+            if (Schema::hasColumn('ticket_assignments', 'old_assigned_to')) {
+                DB::table('ticket_assignments')
+                    ->where('old_assigned_to', $targetUserId)
+                    ->update(['old_assigned_to' => null]);
+            }
+
+            if (Schema::hasColumn('ticket_assignments', 'new_assigned_to')) {
+                DB::table('ticket_assignments')
+                    ->where('new_assigned_to', $targetUserId)
+                    ->update(['new_assigned_to' => null]);
+            }
+        }
+
+        if (Schema::hasTable('activitylogs') && Schema::hasColumn('activitylogs', 'userId')) {
+            DB::table('activitylogs')
+                ->where('userId', $targetUserId)
+                ->delete();
+        }
+
+        if (Schema::hasTable('notifications')) {
+            if (Schema::hasColumn('notifications', 'userId')) {
+                DB::table('notifications')->where('userId', $targetUserId)->delete();
+            }
+
+            if (Schema::hasColumn('notifications', 'user_id')) {
+                DB::table('notifications')->where('user_id', $targetUserId)->delete();
+            }
+        }
+
+        if (Schema::hasTable('usersessions') && Schema::hasColumn('usersessions', 'userId')) {
+            DB::table('usersessions')
+                ->where('userId', $targetUserId)
+                ->delete();
+        }
+
+        if (Schema::hasTable('email_verification_tokens') && Schema::hasColumn('email_verification_tokens', 'email')) {
+            DB::table('email_verification_tokens')
+                ->where('email', $targetEmail)
+                ->delete();
+        }
     }
 
 }

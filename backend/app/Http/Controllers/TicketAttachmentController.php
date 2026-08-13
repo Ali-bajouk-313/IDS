@@ -154,7 +154,7 @@ class TicketAttachmentController extends Controller
     {
         return match ($user->role->roleName) {
             'Admin' => true,
-            'Manager' => $ticket->creator?->departmentId === $user->departmentId,
+            'Manager' => $ticket->createdBy === $user->id,
             'IT Support' => $ticket->assignedTo === $user->id,
             default => $ticket->createdBy === $user->id,
         };

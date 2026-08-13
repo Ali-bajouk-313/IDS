@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\ProfileController;
 use App\Models\Category;
 
 
@@ -15,7 +16,13 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:api')->group(function () {
 
     Route::get('/me', [AuthController::class, 'me']);
+    Route::get('/profile', [ProfileController::class, 'show']);
+    Route::put('/profile', [ProfileController::class, 'update']);
+    Route::put('/profile/password', [ProfileController::class, 'changePassword']);
     Route::get('/users', [AuthController::class, 'index']);
+    Route::get('/users/{id}', [AuthController::class, 'showUser']);
+    Route::put('/users/{id}', [AuthController::class, 'updateUser']);
+    Route::delete('/users/{id}', [AuthController::class, 'deleteUser']);
 
     Route::post('/logout', [AuthController::class, 'logout']);
 
@@ -43,6 +50,14 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/tickets/{ticket}/attachments', [\App\Http\Controllers\TicketAttachmentController::class, 'store']);
     Route::delete('/attachments/{id}', [\App\Http\Controllers\TicketAttachmentController::class, 'destroy']);
     Route::get('/attachments/{attachment}/download', [\App\Http\Controllers\TicketAttachmentController::class, 'download'])->name('ticket-attachments.download');
+    Route::get('/tickets/{ticket}/ai/summary', [\App\Http\Controllers\AiTicketController::class, 'summary']);
+    Route::get('/tickets/{ticket}/ai/priority', [\App\Http\Controllers\AiTicketController::class, 'priority']);
+    Route::get('/tickets/{ticket}/ai/troubleshooting', [\App\Http\Controllers\AiTicketController::class, 'troubleshooting']);
+    Route::middleware('role:Admin,Manager,IT Support')->post('/ai/knowledge-base/ask', [\App\Http\Controllers\KnowledgeBaseAiController::class, 'ask']);
+    Route::post('/ai/chat', [\App\Http\Controllers\AiChatController::class, 'chat']);
+    Route::get('/reports', [\App\Http\Controllers\ReportController::class, 'index']);
+    Route::get('/reports/export/pdf', [\App\Http\Controllers\ReportController::class, 'exportPdf']);
+    Route::get('/reports/export/excel', [\App\Http\Controllers\ReportController::class, 'exportExcel']);
     Route::get('/activity-logs', [\App\Http\Controllers\ActivityLogController::class, 'index']);
     Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index']);
     Route::post('/notifications/{notification}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead']);

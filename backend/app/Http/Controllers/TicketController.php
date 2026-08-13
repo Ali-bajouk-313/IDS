@@ -12,6 +12,7 @@ use App\Services\TicketHistoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -34,9 +35,7 @@ class TicketController extends Controller
         if ($user->role->roleName === 'Admin') {
             // Admin sees all tickets.
         } elseif ($user->role->roleName === 'Manager') {
-            $query->whereHas('creator', function ($q) use ($user) {
-                $q->where('departmentId', $user->departmentId);
-            });
+            $query->where('createdBy', $user->id);
         } elseif ($user->role->roleName === 'IT Support') {
             $query->where('assignedTo', $user->id);
         } else {
@@ -381,7 +380,9 @@ class TicketController extends Controller
         $oldAssignedTo = $ticketRecord->assignedTo;
         $oldStatus = $ticketRecord->status;
         $ticketRecord->assignedTo = $assignedUser->id;
-        $ticketRecord->assignedSupportName = $assignedUser->fullName;
+            if ($this->ticketsTableHasAssignedSupportName()) {
+                $ticketRecord->assignedSupportName = $assignedUser->fullName;
+            }
         $ticketRecord->status = 'Assigned';
         $ticketRecord->save();
 
@@ -445,7 +446,9 @@ class TicketController extends Controller
         $oldStatus = $ticketRecord->status;
         $reason = trim((string) $request->reason);
         $ticketRecord->assignedTo = null;
-        $ticketRecord->assignedSupportName = null;
+            if ($this->ticketsTableHasAssignedSupportName()) {
+                $ticketRecord->assignedSupportName = null;
+            }
         $ticketRecord->status = 'Open';
         $ticketRecord->save();
 
@@ -562,7 +565,7 @@ class TicketController extends Controller
     {
         return match ($user->role->roleName) {
             'Admin' => true,
-            'Manager' => $ticket->creator->departmentId === $user->departmentId,
+            'Manager' => $ticket->createdBy === $user->id,
             'IT Support' => $ticket->assignedTo === $user->id,
             default => $ticket->createdBy === $user->id,
         };
@@ -603,6 +606,10 @@ class TicketController extends Controller
         }
 
         if (array_key_exists('assignedTo', $input)) {
+            if (!$this->ticketsTableHasAssignedSupportName()) {
+                return;
+            }
+
             if ($ticket->assignedTo === null) {
                 $ticket->assignedSupportName = null;
                 return;
@@ -724,5 +731,10 @@ class TicketController extends Controller
         if ($ticket->assignedUser && !empty($ticket->assignedUser->fullName)) {
             $ticket->assignedSupportName = $ticket->assignedUser->fullName;
         }
+    }
+
+    private function ticketsTableHasAssignedSupportName(): bool
+    {
+        return Schema::hasColumn('tickets', 'assignedSupportName');
     }
 }

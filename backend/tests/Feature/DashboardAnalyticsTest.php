@@ -131,15 +131,14 @@ class DashboardAnalyticsTest extends TestCase
             ->assertJsonPath('data.priority.urgent', 1);
     }
 
-    public function test_manager_dashboard_filters_to_department_tickets(): void
+    public function test_manager_dashboard_filters_to_owned_tickets(): void
     {
         $roles = $this->seedRoles();
-        $manager = $this->makeUser($roles['Manager'], 'manager-dept@example.com', 'Manager Dept', 1);
-        $employeeSameDepartment = $this->makeUser($roles['Employee'], 'employee-same@example.com', 'Employee Same', 1);
-        $employeeOtherDepartment = $this->makeUser($roles['Employee'], 'employee-other@example.com', 'Employee Other', 2);
+        $manager = $this->makeUser($roles['Manager'], 'manager-owned@example.com', 'Manager Owned');
+        $employee = $this->makeUser($roles['Employee'], 'employee-same@example.com', 'Employee Same');
 
-        $this->makeTicket('TICKET-9101', $employeeSameDepartment->id, null, 'Open', 'Low', 1);
-        $this->makeTicket('TICKET-9102', $employeeOtherDepartment->id, null, 'Open', 'Medium', 2);
+        $this->makeTicket('TICKET-9101', $manager->id, null, 'Open', 'Low', 1);
+        $this->makeTicket('TICKET-9102', $employee->id, null, 'Open', 'Medium', 2);
 
         $this->actingAs($manager, 'api');
 
