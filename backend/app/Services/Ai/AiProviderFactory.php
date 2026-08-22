@@ -5,6 +5,7 @@ namespace App\Services\Ai;
 use App\Services\Ai\Contracts\AiProviderInterface;
 use App\Services\Ai\Exceptions\AiProviderUnavailableException;
 use App\Services\Ai\Providers\AzureOpenAiProvider;
+use App\Services\Ai\Providers\GeminiProvider;
 use App\Services\Ai\Providers\GroqProvider;
 use App\Services\Ai\Providers\OllamaProvider;
 use App\Services\Ai\Providers\OpenAiProvider;
@@ -14,6 +15,7 @@ class AiProviderFactory
     public function make(?string $provider = null): AiProviderInterface
     {
         return match ($this->resolveProviderName($provider)) {
+            'gemini' => new GeminiProvider(),
             'openai' => new OpenAiProvider(),
             'azure_openai' => new AzureOpenAiProvider(),
             'groq' => new GroqProvider(),
@@ -24,7 +26,7 @@ class AiProviderFactory
 
     public function supportedProviders(): array
     {
-        return ['openai', 'azure_openai', 'groq', 'ollama'];
+        return ['gemini', 'openai', 'azure_openai', 'groq', 'ollama'];
     }
 
     public function resolveProviderName(?string $provider = null): string

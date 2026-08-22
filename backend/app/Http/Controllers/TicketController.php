@@ -174,13 +174,39 @@ class TicketController extends Controller
         }
 
         if ($user->role->roleName === 'Employee') {
-            if ($ticket->createdBy !== $user->id || $ticket->assignedTo !== null) {
+            if (!$this->sameId($ticket->createdBy, $user->id) || $ticket->assignedTo !== null) {
                 return response()->json(['message' => 'Forbidden'], 403);
             }
         }
 
-        if ($user->role->roleName === 'IT Support') {
-            if ($ticket->assignedTo !== $user->id) {
+        if ($user->role->roleName === 'Employee') {
+            $original = [
+                'status' => $ticket->status,
+                'priority' => $ticket->priority,
+                'assignedTo' => $ticket->assignedTo,
+                'title' => $ticket->title,
+                'description' => $ticket->description,
+                'categoryId' => $ticket->categoryId,
+            ];
+
+            $input = $request->only(['title', 'description', 'categoryId', 'priority']);
+            $validator = Validator::make($input, [
+                'title' => 'sometimes|required|string|max:150',
+                'description' => 'sometimes|required|string',
+                'categoryId' => ['sometimes', 'required', 'integer', Rule::exists('categories', 'id')],
+                'priority' => [Rule::in(['Low', 'Medium', 'High', 'Critical'])],
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
+
+            $this->applyTicketUpdates($ticket, $input, $user, $request->comment ?? null);
+            $ticket->save();
+
+            $this->recordTicketUpdateEvents($ticket, $user, $original, $request->ip());
+        } elseif ($user->role->roleName === 'IT Support') {
+            if (!$this->sameId($ticket->assignedTo, $user->id)) {
                 return response()->json(['message' => 'Forbidden'], 403);
             }
 
@@ -565,10 +591,15 @@ class TicketController extends Controller
     {
         return match ($user->role->roleName) {
             'Admin' => true,
-            'Manager' => $ticket->createdBy === $user->id,
-            'IT Support' => $ticket->assignedTo === $user->id,
-            default => $ticket->createdBy === $user->id,
+            'Manager' => $this->sameId($ticket->createdBy, $user->id),
+            'IT Support' => $this->sameId($ticket->assignedTo, $user->id),
+            default => $this->sameId($ticket->createdBy, $user->id),
         };
+    }
+
+    protected function sameId($left, $right): bool
+    {
+        return $left !== null && $right !== null && (int) $left === (int) $right;
     }
 
     protected function canChangeStatus($user, Ticket $ticket, string $newStatus): bool
@@ -590,7 +621,7 @@ class TicketController extends Controller
         }
 
         if ($role === 'IT Support') {
-            return $ticket->assignedTo === $user->id;
+            return $this->sameId($ticket->assignedTo, $user->id);
         }
 
         return false;
