@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Role;
+use App\Models\Category;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Support\Facades\Schema;
@@ -82,7 +83,6 @@ class TicketWorkflowTest extends TestCase
             'password' => 'secret123',
             'status' => 'Active',
         ]);
-
         $ticket = Ticket::create([
             'ticketNumber' => 'TICKET-00001',
             'title' => 'Printer issue',
@@ -99,6 +99,44 @@ class TicketWorkflowTest extends TestCase
 
         $response->assertStatus(403)
             ->assertJsonPath('message', 'You cannot perform this action');
+    }
+
+    public function test_employee_can_edit_details_on_owned_unassigned_ticket(): void
+    {
+        $employeeRole = Role::create(['roleName' => 'Employee']);
+        $employee = User::create([
+            'roleId' => $employeeRole->id,
+            'fullName' => 'Employee Editor',
+            'email' => 'employee-editor@example.com',
+            'password' => 'secret123',
+            'status' => 'Active',
+        ]);
+        Category::create(['id' => 1, 'categoryName' => 'Hardware']);
+
+        $ticket = Ticket::create([
+            'ticketNumber' => 'TICKET-00005',
+            'title' => 'Original title',
+            'description' => 'Original description.',
+            'categoryId' => 1,
+            'createdBy' => $employee->id,
+            'assignedTo' => null,
+            'priority' => 'Medium',
+            'status' => 'Open',
+        ]);
+
+        $this->actingAs($employee, 'api');
+
+        $response = $this->putJson("/api/tickets/{$ticket->id}", [
+            'title' => 'Updated title',
+            'description' => 'Updated description.',
+            'categoryId' => 1,
+            'priority' => 'High',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('ticket.title', 'Updated title')
+            ->assertJsonPath('ticket.description', 'Updated description.')
+            ->assertJsonPath('ticket.priority', 'High');
     }
 
     public function test_it_support_can_transition_assigned_to_in_progress(): void

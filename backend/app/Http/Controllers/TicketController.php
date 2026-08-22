@@ -179,7 +179,33 @@ class TicketController extends Controller
             }
         }
 
-        if ($user->role->roleName === 'IT Support') {
+        if ($user->role->roleName === 'Employee') {
+            $original = [
+                'status' => $ticket->status,
+                'priority' => $ticket->priority,
+                'assignedTo' => $ticket->assignedTo,
+                'title' => $ticket->title,
+                'description' => $ticket->description,
+                'categoryId' => $ticket->categoryId,
+            ];
+
+            $input = $request->only(['title', 'description', 'categoryId', 'priority']);
+            $validator = Validator::make($input, [
+                'title' => 'sometimes|required|string|max:150',
+                'description' => 'sometimes|required|string',
+                'categoryId' => ['sometimes', 'required', 'integer', Rule::exists('categories', 'id')],
+                'priority' => [Rule::in(['Low', 'Medium', 'High', 'Critical'])],
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
+
+            $this->applyTicketUpdates($ticket, $input, $user, $request->comment ?? null);
+            $ticket->save();
+
+            $this->recordTicketUpdateEvents($ticket, $user, $original, $request->ip());
+        } elseif ($user->role->roleName === 'IT Support') {
             if (!$this->sameId($ticket->assignedTo, $user->id)) {
                 return response()->json(['message' => 'Forbidden'], 403);
             }
