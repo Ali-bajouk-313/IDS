@@ -1,4 +1,4 @@
-import { FiSearch, FiSettings } from "react-icons/fi";
+import { FiSearch } from "react-icons/fi";
 import NotificationBell from "./NotificationBell";
 
 function Header({ title, subtitle, userName, onLogout }) {
@@ -18,10 +18,6 @@ function Header({ title, subtitle, userName, onLogout }) {
           </label>
 
           <NotificationBell />
-
-          <button className="rounded-2xl border border-slate-200 p-2.5 text-slate-600 transition hover:bg-slate-100">
-            <FiSettings className="h-5 w-5" />
-          </button>
         </div>
 
         <div className="flex items-center gap-3 rounded-2xl bg-slate-900 px-3 py-2 text-white shadow-lg shadow-slate-900/20">

@@ -9,6 +9,8 @@ backend/node_modules/
 # Environment files
 backend/.env
 frontend/.env
+frontend/.env.*
+!frontend/.env.example
 
 # Logs
 *.log
