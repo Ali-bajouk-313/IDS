@@ -166,6 +166,7 @@ class NotificationApiTest extends TestCase
     {
         $adminRole = Role::create(['roleName' => 'Admin', 'description' => 'Admin']);
         $supportRole = Role::create(['roleName' => 'IT Support', 'description' => 'IT Support']);
+        $managerRole = Role::create(['roleName' => 'Manager', 'description' => 'Manager']);
 
         $admin = User::create([
             'roleId' => $adminRole->id,
@@ -179,6 +180,14 @@ class NotificationApiTest extends TestCase
             'roleId' => $supportRole->id,
             'fullName' => 'Support User',
             'email' => 'support-notify@example.com',
+            'password' => 'secret',
+            'status' => 'Active',
+        ]);
+
+        $manager = User::create([
+            'roleId' => $managerRole->id,
+            'fullName' => 'Manager User',
+            'email' => 'manager-notify@example.com',
             'password' => 'secret',
             'status' => 'Active',
         ]);
@@ -200,6 +209,10 @@ class NotificationApiTest extends TestCase
         $response->assertOk();
         $this->assertDatabaseHas('notifications', [
             'user_id' => $support->id,
+            'type' => 'ticket_assigned',
+        ]);
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $manager->id,
             'type' => 'ticket_assigned',
         ]);
     }

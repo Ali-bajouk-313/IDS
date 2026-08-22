@@ -107,6 +107,13 @@ class TicketCommentController extends Controller
             "A new comment was added to ticket #{$ticketRecord->id}.",
             ['ticket_id' => $ticketRecord->id]
         );
+        $this->notificationService->notifyManagers(
+            'ticket_comment',
+            'New ticket comment',
+            "A new comment was added to ticket #{$ticketRecord->id}.",
+            ['ticket_id' => $ticketRecord->id],
+            $user->id
+        );
 
         $comment->load('user:id,fullName');
 

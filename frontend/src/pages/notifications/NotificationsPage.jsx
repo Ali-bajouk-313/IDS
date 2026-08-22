@@ -13,7 +13,7 @@ function NotificationsPage({ role, title, subtitle }) {
     setError("");
 
     try {
-      const response = await api.get("/notifications");
+      const response = await api.get("/notifications", { cache: false });
       setNotifications(response?.data?.notifications || []);
     } catch (err) {
       setError(err?.response?.data?.message || "Unable to load notifications. Please refresh.");

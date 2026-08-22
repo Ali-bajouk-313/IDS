@@ -96,6 +96,13 @@ class TicketController extends Controller
 
         $this->ticketHistoryService->recordCreated($ticket, $user);
         $this->activityLogService->logTicketCreated($user, $ticket, $request->ip());
+        $this->notificationService->notifyManagers(
+            'ticket_created',
+            'New ticket created',
+            "Ticket #{$ticket->id} was created by {$user->fullName}.",
+            ['ticket_id' => $ticket->id],
+            $user->id
+        );
 
         // Handle optional attachment upload when creating a ticket
         if ($request->hasFile('file')) {
@@ -341,6 +348,13 @@ class TicketController extends Controller
                 "Ticket #{$ticket->id} status changed to {$ticket->status}.",
                 ['ticket_id' => $ticket->id, 'status' => $ticket->status]
             );
+            $this->notificationService->notifyManagers(
+                'ticket_status_changed',
+                'Ticket status updated',
+                "Ticket #{$ticket->id} status changed to {$ticket->status}.",
+                ['ticket_id' => $ticket->id, 'status' => $ticket->status],
+                $user->id
+            );
             if ($ticket->status === 'Closed') {
                 $this->ticketHistoryService->recordClosed($ticket, $user, $oldStatus);
             } elseif ($oldStatus === 'Closed' && $ticket->status === 'Open') {
@@ -423,6 +437,13 @@ class TicketController extends Controller
             'Ticket assigned to you',
             "Ticket #{$ticketRecord->id} has been assigned to you.",
             ['ticket_id' => $ticketRecord->id]
+        );
+        $this->notificationService->notifyManagers(
+            'ticket_assigned',
+            'Ticket assigned',
+            "Ticket #{$ticketRecord->id} was assigned to {$assignedUser->fullName}.",
+            ['ticket_id' => $ticketRecord->id, 'assigned_to' => $assignedUser->id],
+            $user->id
         );
 
         if ($oldStatus !== $ticketRecord->status) {

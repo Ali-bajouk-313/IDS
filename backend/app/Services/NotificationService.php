@@ -47,4 +47,15 @@ class NotificationService
             $this->createForUser($user, $type, $title, $message, $data);
         }
     }
+
+    public function notifyManagers(string $type, string $title, string $message, ?array $data = null, ?int $excludeUserId = null): void
+    {
+        $managers = User::whereHas('role', function ($query) {
+            $query->where('roleName', 'Manager');
+        })
+            ->when($excludeUserId !== null, fn ($query) => $query->where('id', '!=', $excludeUserId))
+            ->get();
+
+        $this->createForUsers($managers, $type, $title, $message, $data);
+    }
 }
