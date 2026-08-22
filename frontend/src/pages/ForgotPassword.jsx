@@ -24,7 +24,7 @@ function ForgotPassword() {
 
     try {
       const response = await authService.forgotPassword({ email });
-      setSuccess(response?.data?.message || "Password reset link sent successfully.");
+      setSuccess(`${response?.data?.message || "Password reset link sent successfully."} Check your inbox and spam folder.`);
       setEmail("");
     } catch (err) {
       const serverError =

@@ -127,7 +127,7 @@ class ReportController extends Controller
 
         return match ($user->role->roleName) {
             'Admin' => $query,
-            'Manager' => $query->where('createdBy', $user->id),
+            'Manager' => $query,
             'IT Support' => $query->where('assignedTo', $user->id),
             'Employee' => $query->where('createdBy', $user->id),
             default => $query->whereRaw('1 = 0'),
@@ -144,8 +144,8 @@ class ReportController extends Controller
             ],
             'Manager' => [
                 'role' => 'Manager',
-                'label' => 'My ticket reports',
-                'description' => 'Live ticket analytics for the tickets you created.',
+                'label' => 'System ticket reports',
+                'description' => 'Live ticket analytics across the full ticket queue.',
             ],
             'IT Support' => [
                 'role' => 'IT Support',

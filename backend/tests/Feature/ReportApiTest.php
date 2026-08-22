@@ -98,7 +98,7 @@ class ReportApiTest extends TestCase
         $response->assertJsonCount(2, 'data.assignedAgents');
     }
 
-    public function test_manager_report_is_scoped_to_their_owned_tickets(): void
+    public function test_manager_report_shows_the_full_ticket_queue(): void
     {
         $roles = $this->seedRoles();
         $manager = $this->makeUser($roles['Manager'], 'manager-reports@example.com', 'Manager Reports');
@@ -116,9 +116,9 @@ class ReportApiTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonPath('data.scope.role', 'Manager')
-            ->assertJsonPath('data.summary.totalTickets', 1)
+            ->assertJsonPath('data.summary.totalTickets', 2)
             ->assertJsonPath('data.summary.openTickets', 1)
-            ->assertJsonPath('data.summary.resolvedTickets', 0)
+            ->assertJsonPath('data.summary.resolvedTickets', 1)
             ->assertJsonCount(1, 'data.assignedAgents');
     }
 
