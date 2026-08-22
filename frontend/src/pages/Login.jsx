@@ -120,6 +120,10 @@ function Login() {
                   </label>
                   <Link
                     to="/forgot-password"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      navigate("/forgot-password");
+                    }}
                     className="text-sm font-medium text-blue-600 transition hover:text-blue-700"
                   >
                     Forgot password?

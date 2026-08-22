@@ -144,8 +144,8 @@ class ReportController extends Controller
             ],
             'Manager' => [
                 'role' => 'Manager',
-                'label' => 'System ticket reports',
-                'description' => 'Live ticket analytics across the full ticket queue.',
+                'label' => 'System-wide reports',
+                'description' => 'Live ticket analytics across the full HelpDeskPro database.',
             ],
             'IT Support' => [
                 'role' => 'IT Support',
