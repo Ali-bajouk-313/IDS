@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use App\Services\ActivityLogService;
 use Illuminate\Validation\Rule;
+use Throwable;
 
 class AuthController extends Controller
 {
@@ -137,7 +138,7 @@ class AuthController extends Controller
 
             'fullName' => $request->fullName,
 
-            'email' => $request->email,
+            'email' => strtolower(trim($request->email)),
 
             // Encrypt password using bcrypt
             'password' => Hash::make($request->password),
@@ -157,11 +158,16 @@ DB::table('email_verification_tokens')->insert([
 ]);
 
 
-Mail::to($user->email)
-    ->send(new EmailVerificationMail(
-        $token,
-        $user->email
-    ));
+        try {
+            Mail::to($user->email)->send(new EmailVerificationMail($token, $user->email));
+        } catch (Throwable $exception) {
+            DB::table('email_verification_tokens')->where('email', $user->email)->delete();
+            report($exception);
+
+            return response()->json([
+                'message' => 'The verification email could not be sent. Check the mail configuration and try again.'
+            ], 503);
+        }
 
         $this->activityLogService->logRegister($user, $request->ip());
 

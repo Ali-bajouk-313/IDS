@@ -8,7 +8,7 @@ Please verify your email address by clicking the link below:
 </p>
 
 
-<a href="http://localhost:5173/verify-email?token={{ urlencode($token) }}&email={{ urlencode($email) }}">
+<a href="{{ config('app.frontend_url') }}/verify-email?token={{ urlencode($token) }}&email={{ urlencode($email) }}">
     Verify Email
 </a>
 

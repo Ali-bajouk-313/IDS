@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use App\Models\User;
 use App\Mail\PasswordResetMail;
+use Throwable;
 class PasswordResetController extends Controller
 {
    public function sendResetLink(Request $request)
@@ -24,7 +25,8 @@ class PasswordResetController extends Controller
     }
 
 
-    $user = User::where('email', $request->email)->first();
+    $email = strtolower(trim($request->email));
+    $user = User::whereRaw('LOWER(email) = ?', [$email])->first();
 
 
     if (!$user) {
@@ -35,7 +37,7 @@ class PasswordResetController extends Controller
     $token = Str::random(60);
     DB::table('password_reset_tokens')->updateOrInsert(
     [
-        'email' => $request->email
+        'email' => $email
     ],
     [
         'token' => $token,
@@ -43,8 +45,16 @@ class PasswordResetController extends Controller
     ]
 );
 
-  Mail::to($request->email)
-    ->send(new PasswordResetMail($token, $request->email));
+    try {
+        Mail::to($user->email)->send(new PasswordResetMail($token, $user->email));
+    } catch (Throwable $exception) {
+        DB::table('password_reset_tokens')->where('email', $email)->delete();
+        report($exception);
+
+        return response()->json([
+            'message' => 'The reset email could not be sent. Check the mail configuration and try again.'
+        ], 503);
+    }
 
 
 return response()->json([
@@ -69,8 +79,9 @@ return response()->json([
     }
 
 
+    $email = strtolower(trim($request->email));
     $resetToken = DB::table('password_reset_tokens')
-        ->where('email', $request->email)
+        ->where('email', $email)
         ->where('token', $request->token)
         ->first();
 
@@ -82,7 +93,7 @@ return response()->json([
     }
 
 
-    $user = User::where('email', $request->email)->first();
+    $user = User::whereRaw('LOWER(email) = ?', [$email])->first();
 
 
     if (!$user) {
@@ -98,7 +109,7 @@ return response()->json([
 
 
     DB::table('password_reset_tokens')
-        ->where('email', $request->email)
+        ->where('email', $email)
         ->delete();
 
 

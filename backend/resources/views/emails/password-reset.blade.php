@@ -10,7 +10,7 @@ You requested to reset your HelpDeskPro password.
 Click the link below to reset your password:
 </p>
 
-<a href="http://localhost:5173/reset-password?token={{ $token }}&email={{ $email }}">
+<a href="{{ config('app.frontend_url') }}/reset-password?token={{ urlencode($token) }}&email={{ urlencode($email) }}">
     Reset Password
 </a>
 
