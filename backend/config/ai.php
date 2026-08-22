@@ -2,7 +2,7 @@
 
 return [
     'provider' => env('AI_PROVIDER', 'gemini'),
-    'model' => env('AI_MODEL', 'gemini-2.0-flash'),
+    'model' => env('AI_MODEL', 'gemini-3.6-flash'),
     'timeout' => (int) env('AI_TIMEOUT', 30),
     'temperature' => (float) env('AI_TEMPERATURE', 0.2),
     'max_tokens' => (int) env('AI_MAX_TOKENS', 1024),
@@ -11,7 +11,7 @@ return [
         'gemini' => [
             'api_key' => trim((string) env('GEMINI_API_KEY', env('AI_GEMINI_API_KEY', ''))),
             'base_url' => rtrim(env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta'), '/'),
-            'model' => env('GEMINI_MODEL', env('AI_MODEL', 'gemini-2.0-flash')),
+            'model' => env('GEMINI_MODEL', env('AI_MODEL', 'gemini-3.6-flash')),
         ],
 
         'openai' => [
