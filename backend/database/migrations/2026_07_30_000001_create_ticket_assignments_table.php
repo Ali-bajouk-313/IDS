@@ -10,7 +10,9 @@ return new class extends Migration
     {
         Schema::table('tickets', function (Blueprint $table) {
             if (!Schema::hasColumn('tickets', 'assignedTo')) {
-                $table->integer('assignedTo')->nullable()->after('createdBy');
+                $table->unsignedBigInteger('assignedTo')
+                    ->nullable()
+                    ->after('createdBy');
 
                 $table->foreign('assignedTo')
                     ->references('id')
@@ -20,22 +22,15 @@ return new class extends Migration
         });
 
         Schema::create('ticket_assignments', function (Blueprint $table) {
-
             $table->id();
 
-            // Match existing database IDs (INT)
-            $table->integer('ticket_id');
-
-            $table->integer('old_assigned_to')->nullable();
-
-            $table->integer('new_assigned_to')->nullable();
-
-            $table->integer('assigned_by')->nullable();
+            $table->unsignedBigInteger('ticket_id');
+            $table->unsignedBigInteger('old_assigned_to')->nullable();
+            $table->unsignedBigInteger('new_assigned_to')->nullable();
+            $table->unsignedBigInteger('assigned_by')->nullable();
 
             $table->string('action');
-
             $table->timestamps();
-
 
             $table->foreign('ticket_id')
                 ->references('id')
@@ -59,16 +54,13 @@ return new class extends Migration
         });
     }
 
-
     public function down(): void
     {
         Schema::dropIfExists('ticket_assignments');
 
         Schema::table('tickets', function (Blueprint $table) {
             if (Schema::hasColumn('tickets', 'assignedTo')) {
-
                 $table->dropForeign(['assignedTo']);
-
                 $table->dropColumn('assignedTo');
             }
         });

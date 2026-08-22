@@ -14,12 +14,15 @@ return new class extends Migration
 
         Schema::create('ticket_attachments', function (Blueprint $table) {
             $table->id();
-            $table->integer('ticket_id');
-            $table->integer('user_id');
+
+            $table->unsignedBigInteger('ticket_id');
+            $table->unsignedBigInteger('user_id');
+
             $table->string('file_name');
             $table->string('stored_name');
             $table->string('mime_type');
             $table->unsignedInteger('size_bytes');
+
             $table->timestamps();
 
             $table->foreign('ticket_id')
