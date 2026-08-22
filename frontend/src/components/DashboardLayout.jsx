@@ -23,7 +23,7 @@ function DashboardLayout({ children, role, title, subtitle }) {
     if (role === "Manager") {
       return [
         { name: "Dashboard", path: "/manager-dashboard", icon: FiHome },
-        { name: "My Tickets", path: "/manager-dashboard/tickets", icon: FiMessageSquare },
+        { name: "All Tickets", path: "/manager-dashboard/tickets", icon: FiMessageSquare },
         { name: "Reports", path: "/manager-dashboard/reports", icon: FiBarChart2 },
         { name: "AI Chatbot", path: "/ai-chat", icon: FiMessageCircle },
         { name: "Notifications", path: "/manager-dashboard/notifications", icon: FiBell },

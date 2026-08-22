@@ -131,7 +131,7 @@ class DashboardAnalyticsTest extends TestCase
             ->assertJsonPath('data.priority.urgent', 1);
     }
 
-    public function test_manager_dashboard_filters_to_owned_tickets(): void
+    public function test_manager_dashboard_shows_the_full_ticket_queue(): void
     {
         $roles = $this->seedRoles();
         $manager = $this->makeUser($roles['Manager'], 'manager-owned@example.com', 'Manager Owned');
@@ -146,7 +146,8 @@ class DashboardAnalyticsTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonPath('success', true)
-            ->assertJsonPath('data.summary.totalTickets', 1);
+            ->assertJsonPath('data.summary.totalTickets', 2)
+            ->assertJsonCount(2, 'data.recentTickets');
     }
 
     public function test_support_dashboard_only_shows_assigned_tickets(): void

@@ -35,7 +35,6 @@ class TicketController extends Controller
         if ($user->role->roleName === 'Admin') {
             // Admin sees all tickets.
         } elseif ($user->role->roleName === 'Manager') {
-            $query->where('createdBy', $user->id);
         } elseif ($user->role->roleName === 'IT Support') {
             $query->where('assignedTo', $user->id);
         } else {
@@ -591,7 +590,7 @@ class TicketController extends Controller
     {
         return match ($user->role->roleName) {
             'Admin' => true,
-            'Manager' => $this->sameId($ticket->createdBy, $user->id),
+            'Manager' => true,
             'IT Support' => $this->sameId($ticket->assignedTo, $user->id),
             default => $this->sameId($ticket->createdBy, $user->id),
         };

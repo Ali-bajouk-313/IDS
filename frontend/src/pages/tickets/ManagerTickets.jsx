@@ -91,7 +91,7 @@ function ManagerTickets() {
   }));
 
   return (
-    <DashboardLayout role="Manager" title="My Tickets" subtitle="Review tickets you created.">
+    <DashboardLayout role="Manager" title="All Tickets" subtitle="Monitor the organization ticket queue.">
       <div className="space-y-6">
         <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
           <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">

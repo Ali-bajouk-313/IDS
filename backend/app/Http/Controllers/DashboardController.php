@@ -44,7 +44,6 @@ class DashboardController extends Controller
 
         $tickets = Ticket::query()
             ->with(['category', 'creator', 'assignedUser'])
-            ->where('createdBy', $user->id)
             ->get();
 
         return response()->json([
