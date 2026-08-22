@@ -8,9 +8,14 @@ backend/node_modules/
 
 # Environment files
 backend/.env
+backend/.env.*
 frontend/.env
 frontend/.env.*
 !frontend/.env.example
+IDS/backend/.env
+IDS/backend/.env.*
+IDS/frontend/.env
+IDS/frontend/.env.*
 
 # Logs
 *.log
