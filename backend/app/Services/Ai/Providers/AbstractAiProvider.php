@@ -18,11 +18,7 @@ abstract class AbstractAiProvider implements AiProviderInterface
         $this->ensureAvailable();
 
         try {
-            $response = Http::timeout($this->timeout())
-                ->acceptJson()
-                ->asJson()
-                ->withHeaders($this->headers())
-                ->post($this->endpoint($request), $this->payload($request));
+            $response = $this->send($request);
         } catch (ConnectionException $exception) {
             throw new AiRequestException('AI provider request timed out or could not connect.', previous: $exception);
         }
@@ -88,6 +84,15 @@ abstract class AbstractAiProvider implements AiProviderInterface
         }
 
         return 'AI provider [' . $this->name() . '] returned an unexpected response.';
+    }
+
+    protected function send(AiRequest $request): Response
+    {
+        return Http::timeout($this->timeout())
+            ->acceptJson()
+            ->asJson()
+            ->withHeaders($this->headers())
+            ->post($this->endpoint($request), $this->payload($request));
     }
 
     protected function ensureAvailable(): void
