@@ -62,10 +62,10 @@ class AiProviderTest extends TestCase
     {
         config([
             'ai.timeout' => 11,
-            'ai.model' => 'llama-3.1-8b-instant',
+            'ai.model' => 'openai/gpt-oss-20b',
             'ai.providers.groq.api_key' => 'test-groq-key',
             'ai.providers.groq.base_url' => 'https://api.groq.com/openai/v1',
-            'ai.providers.groq.model' => 'llama-3.1-8b-instant',
+            'ai.providers.groq.model' => 'openai/gpt-oss-20b',
         ]);
 
         Http::fake([
@@ -87,7 +87,7 @@ class AiProviderTest extends TestCase
         $response = (new GroqProvider())->complete(AiRequest::chat('Summarize the ticket'));
 
         $this->assertSame('groq', $response->provider);
-        $this->assertSame('llama-3.1-8b-instant', $response->model);
+        $this->assertSame('openai/gpt-oss-20b', $response->model);
         $this->assertSame('Groq summary', $response->content);
 
         Http::assertSent(function ($request) {

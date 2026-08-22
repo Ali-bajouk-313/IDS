@@ -25,7 +25,7 @@ return [
         'groq' => [
             'api_key' => trim((string) env('AI_GROQ_API_KEY', '')),
             'base_url' => rtrim(env('AI_GROQ_BASE_URL', 'https://api.groq.com/openai/v1'), '/'),
-            'model' => env('AI_GROQ_MODEL', env('AI_MODEL', 'llama-3.1-8b-instant')),
+            'model' => env('AI_GROQ_MODEL', env('AI_MODEL', 'openai/gpt-oss-20b')),
         ],
 
         'ollama' => [

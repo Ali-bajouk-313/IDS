@@ -45,7 +45,7 @@ class GroqProvider extends AbstractAiProvider
 
     protected function resolveModel(AiRequest $request): string
     {
-        return (string) ($request->model ?? config('ai.providers.groq.model', config('ai.model', 'llama-3.1-8b-instant')));
+        return (string) ($request->model ?? config('ai.providers.groq.model', config('ai.model', 'openai/gpt-oss-20b')));
     }
 
     protected function extractContent(array $data): string

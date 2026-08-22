@@ -20,7 +20,7 @@ return new class extends Migration
 
         Schema::table('notifications', function (Blueprint $table) {
             // Add new columns expected by the application; avoid relying on snake_case existing columns.
-            $table->unsignedBigInteger('user_id')->nullable()->after('id');
+            $table->integer('user_id')->nullable()->after('id');
             $table->string('type')->nullable()->after('user_id');
             $table->json('data')->nullable()->after('message');
             $table->timestamp('read_at')->nullable()->after('data');

@@ -8,9 +8,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // If a previous failed migration left a partial table, recreate it cleanly.
+        // Existing tables may contain production data; only create the table when absent.
         if (Schema::hasTable('ticket_internal_notes')) {
-            Schema::dropIfExists('ticket_internal_notes');
+            return;
         }
 
         Schema::create('ticket_internal_notes', function (Blueprint $table) {

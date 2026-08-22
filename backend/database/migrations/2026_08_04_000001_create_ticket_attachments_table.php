@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         if (Schema::hasTable('ticket_attachments')) {
-            Schema::dropIfExists('ticket_attachments');
+            return;
         }
 
         Schema::create('ticket_attachments', function (Blueprint $table) {
