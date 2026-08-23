@@ -29,9 +29,9 @@ RUN composer install --no-dev --optimize-autoloader
 RUN chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
-RUN sed -i 's/DocumentRoot \\/var\\/www\\/html/DocumentRoot \\/var\\/www\\/html\\/public/' /etc/apache2/sites-available/000-default.conf \
+RUN sed -i 's#DocumentRoot /var/www/html#DocumentRoot /var/www/html/public#' /etc/apache2/sites-available/000-default.conf \
     && sed -i 's#<Directory /var/www/>#<Directory /var/www/html/public>#' /etc/apache2/apache2.conf
 
 EXPOSE 80
 
-CMD ["bash", "-c", "printf '%s\n' \"$AIVEN_CA_CERT\" > /var/www/html/ca.pem && apache2-foreground"]
+CMD ["bash", "-c", "printf '%s\n' \"$AIVEN_CA_CERT\" > /var/www/html/ca.pem && chmod 644 /var/www/html/ca.pem && apache2-foreground"]
