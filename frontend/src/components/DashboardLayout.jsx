@@ -11,8 +11,6 @@ function DashboardLayout({ children, role, title, subtitle }) {
         { name: "Users", path: "/admin-dashboard/users", icon: FiUsers },
         { name: "All Tickets", path: "/admin-dashboard/tickets", icon: FiMessageSquare },
         { name: "Activity Logs", path: "/admin-dashboard/activity-logs", icon: FiActivity },
-        { name: "Categories", path: "/admin-dashboard/categories", icon: FiLayers },
-        { name: "SLA Rules", path: "/admin-dashboard/sla", icon: FiClipboard },
         { name: "Reports", path: "/admin-dashboard/reports", icon: FiBarChart2 },
         { name: "Notifications", path: "/admin-dashboard/notifications", icon: FiBell },
         { name: "AI Chatbot", path: "/ai-chat", icon: FiMessageCircle },
@@ -39,7 +37,6 @@ function DashboardLayout({ children, role, title, subtitle }) {
         { name: "Knowledge Base", path: "/it-dashboard/knowledge", icon: FiLayers },
         { name: "Notifications", path: "/it-dashboard/notifications", icon: FiBell },
         { name: "Reports", path: "/it-dashboard/reports", icon: FiBarChart2 },
-        { name: "Notifications", path: "/it-dashboard/notifications", icon: FiBell },
         { name: "AI Chatbot", path: "/ai-chat", icon: FiMessageCircle },
         { name: "Profile", path: "/profile", icon: FiUserCheck },
       ];

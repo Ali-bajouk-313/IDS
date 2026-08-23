@@ -25,7 +25,16 @@ class NotificationController extends Controller
                     'read_at' => $notification->read_at,
                     'created_at' => $notification->created_at,
                 ];
-            });
+            })
+            ->unique(function (array $notification): string {
+                return implode('|', [
+                    $notification['type'],
+                    $notification['title'],
+                    $notification['message'],
+                    json_encode($notification['data'] ?? []),
+                ]);
+            })
+            ->values();
 
         return response()->json([
             'notifications' => $notifications,

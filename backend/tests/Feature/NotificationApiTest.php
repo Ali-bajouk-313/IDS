@@ -123,6 +123,13 @@ class NotificationApiTest extends TestCase
             'message' => 'A ticket was assigned to you.',
             'data' => ['ticket_id' => 42],
         ]);
+        Notification::create([
+            'user_id' => $user->id,
+            'type' => 'ticket_assigned',
+            'title' => 'New ticket assigned',
+            'message' => 'A ticket was assigned to you.',
+            'data' => ['ticket_id' => 42],
+        ]);
 
         $token = JWTAuth::fromUser($user);
 

@@ -24,7 +24,8 @@ function KnowledgeBaseAssistant() {
 
     try {
       const response = await aiService.askKnowledgeBaseQuestion(trimmedQuestion);
-      setAnswerData(response.data?.data || null);
+      const payload = response.data?.data || response.data || {};
+      setAnswerData(payload);
     } catch (err) {
       setError(err?.response?.data?.message || "Unable to answer the knowledge base question.");
     } finally {
@@ -42,6 +43,7 @@ function KnowledgeBaseAssistant() {
   const categories = sourceContext.categories || [];
   const tickets = sourceContext.tickets || [];
   const comments = sourceContext.comments || [];
+  const keywords = sourceContext.keywords || [];
   const troubleshootingSteps = answerData?.troubleshootingSteps || [];
 
   return (
@@ -148,8 +150,14 @@ function KnowledgeBaseAssistant() {
                 <FiBookOpen className="text-sky-600" />
                 Source Context
               </div>
-              {categories.length > 0 || tickets.length > 0 || comments.length > 0 ? (
+              {answerData ? (
                 <div className="mt-4 space-y-4 text-sm text-slate-700">
+                  <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Question</p>
+                    <p className="mt-2 text-sm text-slate-800">{sourceContext.question || answerData.question || question}</p>
+                    {keywords.length > 0 ? <p className="mt-2 text-xs text-slate-500">Keywords: {keywords.join(", ")}</p> : null}
+                  </div>
+
                   {categories.length > 0 ? (
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Categories</p>
@@ -190,6 +198,12 @@ function KnowledgeBaseAssistant() {
                           </li>
                         ))}
                       </ul>
+                    </div>
+                  ) : null}
+
+                  {categories.length === 0 && tickets.length === 0 && comments.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+                      No matching categories, resolved tickets, or comments were found for this question.
                     </div>
                   ) : null}
                 </div>
