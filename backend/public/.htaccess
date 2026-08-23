@@ -1,3 +1,11 @@
+<IfModule mod_headers.c>
+    SetEnvIf Origin "^https://ids-helpdeskpro-frontend\.onrender\.com$" ALLOWED_ORIGIN=$0
+
+    Header always set Access-Control-Allow-Origin "%{ALLOWED_ORIGIN}e" env=ALLOWED_ORIGIN
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" env=ALLOWED_ORIGIN
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Accept, Origin" env=ALLOWED_ORIGIN
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
