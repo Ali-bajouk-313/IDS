@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+
+ca.pem
+
+vendor/
+node_modules/
+.phpunit.result.cache
