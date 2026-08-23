@@ -26,8 +26,7 @@ COPY . .
 
 RUN composer install --no-dev --optimize-autoloader
 
-RUN php artisan optimize:clear
-
+RUN php artisan config:clear
 RUN chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
