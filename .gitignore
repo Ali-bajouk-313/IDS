@@ -27,3 +27,5 @@ IDS/frontend/.env.*
 # OS files
 .DS_Store
 Thumbs.db
+IDS_FINAL_DATABASE.sql
+backend/ca.pem
