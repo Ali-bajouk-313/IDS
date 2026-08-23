@@ -34,4 +34,4 @@ RUN sed -i 's/DocumentRoot \\/var\\/www\\/html/DocumentRoot \\/var\\/www\\/html\
 
 EXPOSE 80
 
-CMD ["apache2-foreground"]
+CMD ["bash", "-c", "printf '%s\n' \"$AIVEN_CA_CERT\" > /var/www/html/ca.pem && apache2-foreground"]
