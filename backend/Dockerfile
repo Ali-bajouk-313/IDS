@@ -15,8 +15,8 @@ RUN apt-get update && apt-get install -y \
     bcmath \
     gd \
     zip \
-&& a2enmod rewrite headers \
- && rm -rf /var/lib/apt/lists/*
+    && a2enmod rewrite headers \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
@@ -27,11 +27,13 @@ COPY . .
 RUN composer install --no-dev --optimize-autoloader
 
 RUN php artisan config:clear
+
 RUN chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
 RUN sed -i 's#DocumentRoot /var/www/html#DocumentRoot /var/www/html/public#' /etc/apache2/sites-available/000-default.conf \
-    && sed -i 's#<Directory /var/www/>#<Directory /var/www/html/public>#' /etc/apache2/apache2.conf
+    && sed -i 's#<Directory /var/www/>#<Directory /var/www/html/public>#' /etc/apache2/apache2.conf \
+    && sed -i 's/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
 
 EXPOSE 80
 
