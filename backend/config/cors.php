@@ -6,6 +6,7 @@ return [
     'allowed_methods' => ['*'],
 
     'allowed_origins' => [
+        'http://localhost:5173',
         'https://ids-helpdeskpro-frontend.onrender.com',
     ],
 
