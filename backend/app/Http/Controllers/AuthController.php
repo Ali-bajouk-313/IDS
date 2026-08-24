@@ -160,15 +160,17 @@ DB::table('email_verification_tokens')->insert([
 
         try {
             Mail::to($user->email)->send(new EmailVerificationMail($token, $user->email));
-        } catch (Throwable $exception) {
-            DB::table('email_verification_tokens')->where('email', $user->email)->delete();
-            report($exception);
+        }catch (Throwable $exception) {
+    DB::table('email_verification_tokens')
+        ->where('email', $user->email)
+        ->delete();
 
-       return response()->json([
-    'message' => 'The verification email could not be sent. Check the mail configuration and try again.'
-], 503);
-        }
+    report($exception);
 
+    return response()->json([
+        'message' => $exception->getMessage(),
+    ], 503);
+}
         $this->activityLogService->logRegister($user, $request->ip());
 
 
