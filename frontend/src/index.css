@@ -16,6 +16,20 @@
   box-sizing: border-box;
 }
 
+img,
+svg,
+canvas {
+  max-width: 100%;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+
 html,
 body,
 #root {
@@ -28,6 +42,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background: #f8fafc;
+  overflow-x: hidden;
 }
 
 button,

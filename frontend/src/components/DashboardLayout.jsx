@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import { FiActivity, FiBarChart2, FiBell, FiClipboard, FiHome, FiLayers, FiMessageCircle, FiMessageSquare, FiUserCheck, FiUsers } from "react-icons/fi";
 
 function DashboardLayout({ children, role, title, subtitle }) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const menus = useMemo(() => {
     if (role === "Admin") {
       return [
@@ -64,10 +65,10 @@ function DashboardLayout({ children, role, title, subtitle }) {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.10),_transparent_28%),linear-gradient(135deg,_#f8fafc_0%,_#f1f5f9_100%)] text-slate-800">
-      <Sidebar role={role} menus={menus} />
+      <Sidebar role={role} menus={menus} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <div className="ml-0 lg:ml-72">
-        <div className="p-4 sm:p-6 lg:p-8">
-          <Header title={title} subtitle={subtitle} userName={userName} onLogout={handleLogout} />
+        <div className="min-w-0 p-3 sm:p-6 lg:p-8">
+          <Header title={title} subtitle={subtitle} userName={userName} onLogout={handleLogout} onMenuClick={() => setIsSidebarOpen(true)} />
           <div className="mt-6 space-y-6">{children}</div>
         </div>
       </div>
