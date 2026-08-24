@@ -165,8 +165,9 @@ DB::table('email_verification_tokens')->insert([
             report($exception);
 
             return response()->json([
-                'message' => 'The verification email could not be sent. Check the mail configuration and try again.'
-            ], 503);
+    'message' => 'The verification email could not be sent.',
+    'error' => $exception->getMessage(),
+], 503);
         }
 
         $this->activityLogService->logRegister($user, $request->ip());
