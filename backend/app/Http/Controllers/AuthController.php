@@ -164,9 +164,8 @@ DB::table('email_verification_tokens')->insert([
             DB::table('email_verification_tokens')->where('email', $user->email)->delete();
             report($exception);
 
-            return response()->json([
-    'message' => 'The verification email could not be sent.',
-    'error' => $exception->getMessage(),
+       return response()->json([
+    'message' => 'The verification email could not be sent. Check the mail configuration and try again.'
 ], 503);
         }
 
