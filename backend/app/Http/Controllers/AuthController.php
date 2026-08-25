@@ -246,6 +246,49 @@ public function verifyEmail(Request $request)
     ]);
 }
 
+    public function resendVerificationEmail(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $normalizedEmail = strtolower(trim($request->input('email')));
+        $user = User::where('email', $normalizedEmail)->first();
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'User not found'
+            ], 404);
+        }
+
+        if (!is_null($user->email_verified_at)) {
+            return response()->json([
+                'message' => 'Email is already verified'
+            ], 400);
+        }
+
+        $token = Str::random(60);
+
+        try {
+            Mail::to($normalizedEmail)->send(new EmailVerificationMail($token, $normalizedEmail));
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => 'Unable to send the verification email right now.'
+            ], 503);
+        }
+
+        DB::table('email_verification_tokens')->updateOrInsert(
+            ['email' => $normalizedEmail],
+            ['token' => $token, 'created_at' => now()]
+        );
+
+        return response()->json([
+            'message' => 'A new verification link has been sent to your email.'
+        ]);
+    }
+
     public function me()
     {
         $user = auth('api')->user();

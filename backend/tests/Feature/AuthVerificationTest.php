@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
+use App\Mail\EmailVerificationMail;
 use Tests\TestCase;
 
 class AuthVerificationTest extends TestCase
@@ -53,5 +55,35 @@ class AuthVerificationTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonFragment(['message' => 'Email is already verified']);
+    }
+
+    public function test_unverified_user_can_request_a_new_verification_email(): void
+    {
+        Mail::fake();
+
+        $user = User::create([
+            'roleId' => 1,
+            'departmentId' => null,
+            'fullName' => 'Unverified User',
+            'email' => 'unverified@example.com',
+            'password' => Hash::make('password123'),
+            'phone' => null,
+            'status' => 'Active',
+        ]);
+
+        $response = $this->postJson('/api/resend-verification-email', [
+            'email' => strtoupper($user->email),
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonFragment([
+            'message' => 'A new verification link has been sent to your email.',
+        ]);
+        $this->assertDatabaseHas('email_verification_tokens', [
+            'email' => $user->email,
+        ]);
+        Mail::assertSent(EmailVerificationMail::class, function (EmailVerificationMail $mail) use ($user) {
+            return $mail->email === $user->email && strlen($mail->token) === 60;
+        });
     }
 }

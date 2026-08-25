@@ -17,13 +17,28 @@ function VerifyEmail() {
   const hasEmail = Boolean(email);
 
   const handleVerify = async () => {
-    if (!email || !token) {
+    if (!email) {
       setStatus("error");
-      setMessage(
-        !email
-          ? "Unable to verify email because no email address was provided. Please open the verification link from your email."
-          : "A verification token is not available. Please click the Verify Email button from the email message you received."
-      );
+      setMessage("Unable to continue because no email address was provided.");
+      return;
+    }
+
+    if (!token) {
+      setLoading(true);
+      setStatus("loading");
+      setMessage("");
+
+      try {
+        const response = await api.post("/resend-verification-email", { email });
+        setStatus("sent");
+        setMessage(response?.data?.message || "A new verification link has been sent to your email.");
+      } catch (err) {
+        setStatus("error");
+        setMessage(err?.response?.data?.message || "Unable to resend the verification email right now.");
+      } finally {
+        setLoading(false);
+      }
+
       return;
     }
 
@@ -121,7 +136,7 @@ function VerifyEmail() {
                 </div>
 
                 {message && (
-                  <div className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${status === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`}>
+                  <div className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${status === "sent" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`}>
                     {message}
                   </div>
                 )}
